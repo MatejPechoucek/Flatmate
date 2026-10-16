@@ -145,7 +145,6 @@ export {
   setRecurringActive,
 } from "./recurring";
 export {
-  cannotChange,
   deleteExpense,
   dismissNotice,
   editExpense,
@@ -153,4 +152,4 @@ export {
   getMyNotices,
   snapshotOf,
 } from "./edits";
-export { diffFor, type Diff } from "./changes";
+export { cannotChange, creatorOf, diffFor, type Diff } from "./changes";
