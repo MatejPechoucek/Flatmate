@@ -25,9 +25,11 @@ export function useRealtime(flatId: string, tables: string[], onChange: () => vo
     const channel = supabase.channel(`flat:${flatId}:${tableKey}:${crypto.randomUUID()}`);
     for (const table of tableKey.split(",")) {
       const unfiltered = table === "expense_shares" || table === "weight_votes";
+      // `flats` has no flat_id column; filter on its own id instead.
+      const filter = table === "flats" ? `id=eq.${flatId}` : `flat_id=eq.${flatId}`;
       channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table, ...(unfiltered ? {} : { filter: `flat_id=eq.${flatId}` }) },
+        { event: "*", schema: "public", table, ...(unfiltered ? {} : { filter }) },
         () => callback.current(),
       );
     }

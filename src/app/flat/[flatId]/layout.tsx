@@ -16,10 +16,11 @@ const tabs = [
 
 export default function FlatLayout({ children }: { children: ReactNode }) {
   const { flatId } = useParams<{ flatId: string }>();
+  const pathname = usePathname();
   return (
     <FlatProvider flatId={flatId}>
       <Header />
-      <main className="flex-1 px-4 pb-32 pt-2">{children}</main>
+      <main key={pathname} className="animate-rise-in flex-1 px-4 pb-36 pt-2">{children}</main>
       <TabBar base={`/flat/${flatId}`} />
     </FlatProvider>
   );
@@ -28,8 +29,8 @@ export default function FlatLayout({ children }: { children: ReactNode }) {
 function Header() {
   const { flat, members } = useFlat();
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between bg-background/85 px-5 pb-3 pt-6 backdrop-blur">
-      <h1 className="truncate text-xl font-bold tracking-tight">{flat.name}</h1>
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-background/90 px-5 pb-4 pt-[max(1.5rem,env(safe-area-inset-top))] backdrop-blur-md">
+      <h1 className="truncate text-2xl font-bold tracking-tight">{flat.name}</h1>
       <AvatarStack names={members.map((m) => m.name)} />
     </header>
   );
@@ -38,17 +39,20 @@ function Header() {
 function TabBar({ base }: { base: string }) {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="grid grid-cols-4">
+    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+      <div className="grid grid-cols-4 px-2">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === base + href;
           return (
             <Link
               key={label}
               href={base + href}
-              className={`flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${active ? "text-accent" : "text-muted"}`}
+              aria-current={active ? "page" : undefined}
+              className={`flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors ${active ? "text-accent" : "text-muted"}`}
             >
-              <Icon size={22} strokeWidth={active ? 2.4 : 1.8} />
+              <span className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}>
+                <Icon size={20} strokeWidth={active ? 2.4 : 1.8} />
+              </span>
               {label}
             </Link>
           );

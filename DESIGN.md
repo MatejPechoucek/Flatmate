@@ -33,6 +33,7 @@ TabBar        Home · Split · Chores · Flat
 - Lists of things → `<List>` + `<ListRow leading title subtitle trailing>`. Leading is usually an `<Avatar>` or a round icon; trailing is an amount, badge or small button.
 - Create and edit forms always go in a `<Sheet>` (bottom sheet), never a new page.
 - Empty lists → `<EmptyState>` with one friendly sentence.
+- Cards and lists are borderless `surface` blocks on `background`: separate with whitespace, not outlines.
 
 ## Components
 
@@ -48,6 +49,7 @@ TabBar        Home · Split · Chores · Flat
 | `Amount` | **All money goes through this.** `signed` adds +/− and green/red from the viewer's perspective |
 | `WeightDots` | Chore effort, 1–5 |
 | `ProgressBar` | Fairness bars |
+| `Skeleton` | Loading placeholder; compose into the real layout's shape (never "Loading…" text) |
 
 ## Conventions
 

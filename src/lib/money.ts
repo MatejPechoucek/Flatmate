@@ -12,9 +12,14 @@ export function parsePounds(input: string): number | null {
   return Math.round(parseFloat(cleaned) * 100);
 }
 
-/** PayPal.me username from whatever was typed: "priyak", "@priyak" or "paypal.me/priyak". */
+/** PayPal.me username from whatever was typed: "priyak", "@priyak", "paypal.me/priyak" (or legacy "paypal:priyak"). */
 export function normalizePayHandle(input: string): string {
-  return input.trim().replace(/^(https?:\/\/)?(www\.)?paypal\.me\//i, "").replace(/^@/, "").split(/[/?#]/)[0];
+  return input
+    .trim()
+    .replace(/^(https?:\/\/)?(www\.)?paypal\.me\//i, "")
+    .replace(/^paypal:/i, "")
+    .replace(/^@/, "")
+    .split(/[/?#\s]/)[0];
 }
 
 /** PayPal.me link with the amount pre-filled in GBP. */
