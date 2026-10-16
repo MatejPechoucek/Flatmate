@@ -8,18 +8,18 @@ description: Design and polish screens in the Flatmate app (Next.js + Tailwind v
 The repo's design rules, layered on top of the general `frontend-design` skill. When the two disagree, **this file wins**: three people build screens in parallel, and they must look like one app.
 
 ## Read first
-- `DESIGN.md` (tokens, screen anatomy, component table, copy tone)
+- `README.md` → "Design rules" (tokens, screen anatomy, components, copy tone)
 - `src/components/ui.tsx` (the kit; every screen is built from it)
 - `src/app/globals.css` (colour tokens, light and dark)
 
 ## Hard rules
 1. **Colours only via tokens:** `bg-background`, `bg-surface`, `bg-surface-2`, `border-border`, `text-foreground`, `text-muted`, `accent` / `accent-soft` / `accent-fg`, `positive*`, `negative*`, `warning*`. Never use hex values or Tailwind palette colours (`bg-blue-500`). For a new colour, add a token to `globals.css` in **both** the light and dark blocks, plus the `@theme inline` mapping.
-2. **New visual pattern → new component in `ui.tsx`**, not one-off classes in a screen. Keep its API small and add a line to the DESIGN.md component table.
+2. **New visual pattern → new component in `ui.tsx`**, not one-off classes in a screen. Keep its API small and add a line to the component table in README.md.
 3. **Money only through `<Amount>` / `formatPence`.** Integer pence everywhere.
 4. **Forms go in a `<Sheet>`**, never a new page. One primary `Button` per view. One `Fab` per screen.
 5. **Touch targets ≥ 44px**: buttons `h-12`, rows `min-h-16`. Icons from `lucide-react`, size 18–22.
 6. **Copy is short, warm and neutral.** The app nudges, it never blames ("Due tomorrow", not "You haven't…").
-7. **Only edit files your Part owns** (see TASKS.md). `ui.tsx`, `globals.css` and `src/lib/*` belong to Part 1, so ask before changing them if you're on Part 2 or 3.
+7. **Only edit files your Part owns** (see "Team" in README.md). `ui.tsx`, `globals.css` and `src/lib/*` belong to Part 1, so ask before changing them if you're on Part 2 or 3.
 
 ## Where "better" comes from (in this order)
 1. **Hierarchy:** one hero number per screen (the balance, your next chore). Big, bold, `tabular-nums`. Everything else steps down.

@@ -3,7 +3,7 @@
 --
 -- Invite code: GWRST4  →  open /join/GWRST4 and tap "Alex" to become the presenter.
 --
--- Story the data tells (matches the demo script in IDEA.md):
+-- Story the data tells (the demo script):
 --   • 4 flatmates, ~3 weeks of history.
 --   • Fairness (28 days): Sam 9 · Alex 6 · Priya 6 · Tom 3  → Tom gets the next task.
 --   • Tom already bought out Sam's bathroom clean once (£5 buyout expense, Sam kept the points).

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — see DESIGN.md. Never hard-code colours in components;
+ * Design tokens — see "Design rules" in README.md. Never hard-code colours in components;
  * use the Tailwind classes these generate (bg-surface, text-muted, text-positive…).
  */
 :root {

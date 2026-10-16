@@ -1,4 +1,4 @@
-// Shared UI kit — see DESIGN.md for when to use what.
+// Shared UI kit — see "Design rules" in README.md for when to use what.
 // Build screens out of these so Split and Chores look like one app.
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { Plus, X } from "lucide-react";

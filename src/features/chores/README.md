@@ -22,7 +22,7 @@ Existing `getOpenTasks(flatId, assignedTo?)`, `getOpenBounties(flatId)` and `cat
 
 Every mutation RPC returns `{ flat_id, task_ids, chore_id?, bounty_id?, expense_id? }`. Creation additionally returns `chore`; offering returns `bounty`. `createChore` and `offerBounty` preserve their row return shape and attach the IDs as `.mutation`. Completion, cancellation and acceptance return the mutation IDs directly. Reload tasks, fairness, bounties and balances after a buyout; `onMutation` is available for hosts with caches. The Chores screen refreshes after mutations and on the shared Realtime hook, window focus and a 15-second fallback poll.
 
-**Buyouts deliberately do not call client-side Split `addExpense`.** That instruction in TASKS.md conflicts with the approved atomicity requirement. `accept_bounty` writes the same `expenses` and `expense_shares` tables in the transaction that accepts and reassigns. Payer = actual doer, share = 100% owed by original offerer, `split_type = 'amount'`, description = `Buyout: <title>`. Split must not insert a second expense. Its normal ledger queries and subscriptions receive these rows.
+**Buyouts deliberately do not call client-side Split `addExpense`.** The original plan's client-side `addExpense` step conflicts with the approved atomicity requirement. `accept_bounty` writes the same `expenses` and `expense_shares` tables in the transaction that accepts and reassigns. Payer = actual doer, share = 100% owed by original offerer, `split_type = 'amount'`, description = `Buyout: <title>`. Split must not insert a second expense. Its normal ledger queries and subscriptions receive these rows.
 
 ## Behaviour
 

@@ -10,7 +10,7 @@ const expense = (payer: string, shares: Record<string, number>, deleted = false)
   expense_shares: Object.entries(shares).map(([member_id, amount_pence]) => ({ member_id, amount_pence })),
 });
 
-test("SPLIT.md example: A and B each paid £30 for A/B/C → C pays both", () => {
+test("Worked example: A and B each paid £30 for A/B/C → C pays both", () => {
   const net = netBalances(
     [expense("A", { A: 1000, B: 1000, C: 1000 }), expense("B", { A: 1000, B: 1000, C: 1000 })],
     [],
