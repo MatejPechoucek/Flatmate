@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, Coins, Receipt } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
-import { Amount, Avatar, Badge, EmptyState, List, ListRow, Section, WeightDots } from "@/components/ui";
+import { Amount, Avatar, Badge, EmptyState, List, ListRow, Section, Skeleton, WeightDots } from "@/components/ui";
 import { DEMO_FLAT_ID, demoActivity, demoBalances, demoBounties, demoChores, demoTasks } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import { dueLabel, timeAgo } from "@/lib/dates";
@@ -83,19 +83,25 @@ export function HomeScreen() {
 
   useRealtime(flat.id, isDemo ? [] : ["expenses", "settlements", "chore_tasks", "bounties"], load);
 
-  if (!data) return <p className="p-6 text-center text-muted">Loading…</p>;
+  if (!data) return <HomeSkeleton />;
   const { net, myTasks, bounties, activity } = data;
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/flat/${flat.id}/split`}>
-        <div className="flex items-center justify-between rounded-2xl bg-accent p-5 text-accent-fg shadow-lg shadow-accent/20">
-          <div>
-            <p className="text-sm opacity-80">{net === 0 ? "You're all square" : net > 0 ? "You're owed" : "You owe"}</p>
-            <p className="text-3xl font-bold tabular-nums">{formatPence(Math.abs(net))}</p>
-          </div>
-          <ChevronRight className="opacity-80" />
+      <Link
+        href={`/flat/${flat.id}/split`}
+        className="flex items-end justify-between rounded-3xl bg-surface p-6 transition active:scale-[0.98]"
+      >
+        <div>
+          <p className="text-sm font-medium text-muted">{net === 0 ? "You're all square" : net > 0 ? "You're owed" : "You owe"}</p>
+          <Amount
+            pence={net}
+            className={`mt-1 block text-5xl font-bold tracking-tight ${net > 0 ? "text-positive" : net < 0 ? "text-negative" : ""}`}
+          />
         </div>
+        <span className="flex items-center gap-0.5 pb-1.5 text-sm font-medium text-accent">
+          Balances <ChevronRight size={18} />
+        </span>
       </Link>
 
       <Section
@@ -167,6 +173,23 @@ export function HomeScreen() {
           </List>
         )}
       </Section>
+    </div>
+  );
+}
+
+/** Same shape as the real Home, so nothing jumps when data lands. */
+function HomeSkeleton() {
+  return (
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading">
+      <Skeleton className="h-32 rounded-3xl" />
+      <div className="flex flex-col gap-2.5">
+        <Skeleton className="ml-1 h-3 w-28" />
+        <Skeleton className="h-36 rounded-3xl" />
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <Skeleton className="ml-1 h-3 w-20" />
+        <Skeleton className="h-52 rounded-3xl" />
+      </div>
     </div>
   );
 }

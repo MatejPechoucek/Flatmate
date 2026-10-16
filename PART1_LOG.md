@@ -9,7 +9,7 @@ Status: `npx tsc --noEmit` ✅ · `npm run lint` ✅ · `npm run build` ✅ (bui
 
 | # | Task | Status |
 |---|---|---|
-| 1 | Supabase project, run `schema.sql`, share `.env.local`, deploy to Vercel | 🟡 Supabase ✅ (schema + seed run, `.env.local` set, read/write verified 16 Oct) · share env with team ⏳ · Vercel ⏳ |
+| 1 | Supabase project, run `schema.sql`, share `.env.local`, deploy to Vercel | 🟡 Supabase ✅ (schema + seed run, `.env.local` set, read/write verified 16 Oct) · share env with team ⏳ · Vercel ✅ **https://flatmate-gules.vercel.app** |
 | 2 | `createFlat`, `findFlatByCode`, `joinFlat` → Landing + Join | ✅ |
 | 3 | Settings: invite link + QR, buyout rate editor | ✅ |
 | 4 | Home: real `getBalances` / `getOpenTasks` / `getOpenBounties` | ✅ wired, with automatic fallback until Split/Chores implement them |
@@ -27,7 +27,10 @@ Status: `npx tsc --noEmit` ✅ · `npm run lint` ✅ · `npm run build` ✅ (bui
 2. **Env:** `cp .env.example .env.local` and fill in both values. Send them to the team privately (never commit `.env.local`; `.gitignore` already blocks `.env*`).
 3. **Run:** `npm install && npm run dev` → http://localhost:3000.
    - Notes from doing it: Supabase warns *"creates tables without enabling RLS"* on `schema.sql`. That's a false alarm, because the loop at the end enables RLS. Click **Run without RLS**. Use the URL **without** `/rest/v1/`. Keys are at Project Settings → API Keys (Publishable `sb_publishable_…`, or Legacy → `anon`). Watch for a stray space after `=` in `.env.local`.
-4. **Vercel:** import the GitHub repo at vercel.com/new, add the same two env vars, deploy. The QR code uses `window.location.origin`, so it automatically points to the Vercel URL once you open the app there. **Show the QR from the deployed site, not localhost**, otherwise judges' phones can't open it.
+4. **Vercel (what we actually did):** the GitHub repo belongs to a teammate, so Vercel's Git import wasn't available to us. We deployed with the CLI instead:
+   `npx vercel login` → `npx vercel link --yes --project flatmate` → added both env vars for production, preview and development (the key needs `--type config`, because Vercel asks before exposing anything named `*KEY*`; the publishable key is meant to be public) → `npx vercel deploy --prod --yes`.
+   **To redeploy after changes:** `npx vercel deploy --prod --yes`. It deploys your *local* files, whatever branch you're on. For automatic deploys on push, the repo owner can connect it in the Vercel dashboard (Project → Settings → Git).
+   *Original plan, for reference:* import the GitHub repo at vercel.com/new, add the same two env vars, deploy. The QR code uses `window.location.origin`, so it automatically points to the Vercel URL once you open the app there. **Show the QR from the deployed site, not localhost**, otherwise judges' phones can't open it.
 
 ---
 
@@ -108,6 +111,11 @@ Claude designs much better when it can screenshot its own output and critique it
 - Or the built-in **`claude-in-chrome`** skill (already available in this session), which drives your real Chrome.
 - The built-in **`run`** skill launches the app and confirms changes visually.
 
+### ✅ Installed (16 Oct)
+- `frontend-design@claude-plugins-official`, installed with `claude plugin install …` (user scope: on your machine only, so each teammate runs the same command).
+- **Project skill `.claude/skills/flatmate-ui/SKILL.md`**: our repo-specific rules (tokens only, build from `ui.tsx`, money via `<Amount>`, sheets for forms) plus a "where better comes from" checklist and a screenshot-review workflow. It's committed to the repo, so teammates get it automatically. It deliberately **overrides** `frontend-design` wherever they disagree, so the three Parts stay visually consistent.
+- **Custom skills in general:** a skill is just a folder with a `SKILL.md`. It goes in `.claude/skills/<name>/` (in the project, shared via git) or `~/.claude/skills/<name>/` (personal). The `description` in its front matter decides when Claude uses it automatically; you can also run it as `/<name>`.
+
 ### 2. Anthropic's `frontend-design` skill (free, official)
 It pushes Claude away from generic "AI-looking" UI and towards deliberate typography, colour, motion and layout choices.
 ```bash
@@ -145,3 +153,17 @@ IDEA.md lists shadcn as optional. `npx shadcn@latest mcp init --client claude` l
 - **Ask for 2–3 variants** of a key screen (the Home balance card, the bounty row), pick one, then polish.
 - **Name the feeling and the constraint:** "calm, friendly, Monzo-like; one accent colour; must fit at 390px with no horizontal scroll."
 - **Polish pass at the end:** empty states, loading skeletons, tap feedback (`active:scale-95`), and transitions on the Sheet. These are what make a demo feel like a real app.
+
+## UI restyle: cleaner look (kit-level, so every screen inherits it)
+**What changed**
+- `ui.tsx`: Lists, Cards, EmptyState and Inputs dropped their borders and dashed outlines. They're now borderless `surface` blocks with `rounded-3xl`, and inputs get a soft focus ring. Small buttons are pill-shaped (`h-9`), disabled buttons fade to 40%, the FAB lost its purple glow, the sheet close button is a 36px round target, and badges and row spacing got a bit more breathing room.
+- New `Skeleton` component (added to the DESIGN.md table). Home uses `HomeSkeleton` in place of the "Loading…" text.
+- `globals.css`: a slightly warmer, lower-contrast light background and border, plus `animate-sheet-up`, `animate-fade-in` and `animate-rise-in` utilities (200–240ms, turned off under `prefers-reduced-motion`).
+- Sheet slides up and its backdrop fades in. Page content fades and rises in on tab change.
+- Flat layout: bigger flat name, safe-area padding, and a tab bar without the top border whose active tab sits on an `accent-soft` pill.
+- Home hero: was a solid accent slab with a coloured glow, now a surface card with a 5xl `<Amount>` coloured positive or negative and a "Balances →" link.
+
+**Why**
+- Every list had a border on top of a fill, so the screens felt boxy. The skill says "whitespace over borders".
+- The hero was the loudest element but didn't say whether you owe or are owed. Colouring the number by meaning makes it the clear hero number.
+- Split and Chores screens belong to Parts 2 and 3, so I changed only the shared kit, tokens and layout (Part 1). Their screens pick up the new look with no edits.

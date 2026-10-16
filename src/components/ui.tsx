@@ -9,8 +9,8 @@ import { formatPence } from "@/lib/money";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const buttonStyles: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-fg hover:opacity-90",
-  secondary: "bg-surface-2 text-foreground hover:bg-border",
+  primary: "bg-accent text-accent-fg hover:brightness-110",
+  secondary: "bg-surface-2 text-foreground hover:bg-border/70",
   ghost: "text-accent hover:bg-accent-soft",
   danger: "bg-negative-soft text-negative hover:opacity-90",
 };
@@ -21,10 +21,10 @@ export function Button({
   className = "",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: "sm" | "md" }) {
-  const sizing = size === "sm" ? "h-8 px-3 text-sm rounded-lg" : "h-12 px-5 rounded-xl";
+  const sizing = size === "sm" ? "h-9 px-3.5 text-sm rounded-full" : "h-12 px-5 rounded-2xl";
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 font-medium transition active:scale-[0.98] disabled:opacity-50 ${sizing} ${buttonStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 ${sizing} ${buttonStyles[variant]} ${className}`}
       {...props}
     />
   );
@@ -36,7 +36,7 @@ export function Fab({ label, onClick }: { label: string; onClick?: () => void })
     <div className="pointer-events-none fixed inset-x-0 bottom-24 z-20 mx-auto flex max-w-md justify-end px-4">
       <button
         onClick={onClick}
-        className="pointer-events-auto inline-flex h-14 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-fg shadow-lg shadow-accent/30 transition active:scale-95"
+        className="pointer-events-auto inline-flex h-14 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-fg shadow-lg shadow-black/15 transition duration-150 active:scale-95"
       >
         <Plus size={20} strokeWidth={2.5} />
         {label}
@@ -50,13 +50,13 @@ export function Fab({ label, onClick }: { label: string; onClick?: () => void })
 export function Input({ label, className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   const input = (
     <input
-      className={`h-12 w-full rounded-xl border border-border bg-surface px-4 outline-none transition placeholder:text-muted/70 focus:border-accent ${className}`}
+      className={`h-12 w-full rounded-2xl border border-transparent bg-surface px-4 outline-none transition placeholder:text-muted/60 focus:border-accent focus:ring-4 focus:ring-accent/15 ${className}`}
       {...props}
     />
   );
   if (!label) return input;
   return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+    <label className="flex flex-col gap-2 text-sm font-medium text-muted">
       {label}
       {input}
     </label>
@@ -74,12 +74,12 @@ export function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex rounded-xl bg-surface-2 p-1">
+    <div className="flex rounded-2xl bg-surface-2 p-1">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
-          className={`h-9 flex-1 rounded-lg text-sm font-medium transition ${
+          className={`h-10 flex-1 rounded-xl text-sm font-medium transition duration-150 ${
             o.value === value ? "bg-surface text-foreground shadow-sm" : "text-muted"
           }`}
         >
@@ -93,14 +93,14 @@ export function SegmentedControl<T extends string>({
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-border bg-surface p-4 ${className}`}>{children}</div>;
+  return <div className={`rounded-3xl bg-surface p-5 ${className}`}>{children}</div>;
 }
 
 /** A titled block of a screen. Screens are a vertical stack of Sections. */
 export function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between px-1">
+      <div className="mb-2.5 flex min-h-6 items-center justify-between px-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">{title}</h2>
         {action}
       </div>
@@ -111,7 +111,7 @@ export function Section({ title, action, children }: { title: string; action?: R
 
 /** Container for ListRows — rows are separated by hairlines. */
 export function List({ children }: { children: ReactNode }) {
-  return <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">{children}</div>;
+  return <div className="divide-y divide-border/70 overflow-hidden rounded-3xl bg-surface">{children}</div>;
 }
 
 /** The standard row: leading visual · title/subtitle · trailing value. */
@@ -131,21 +131,26 @@ export function ListRow({
   return (
     <div
       onClick={onClick}
-      className={`flex min-h-16 items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer active:bg-surface-2" : ""}`}
+      className={`flex min-h-16 items-center gap-3.5 px-4 py-3 ${onClick ? "cursor-pointer transition-colors active:bg-surface-2" : ""}`}
     >
       {leading}
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{title}</div>
-        {subtitle && <div className="truncate text-sm text-muted">{subtitle}</div>}
+        {subtitle && <div className="mt-0.5 truncate text-sm text-muted">{subtitle}</div>}
       </div>
       {trailing && <div className="shrink-0 text-right">{trailing}</div>}
     </div>
   );
 }
 
+/** Pulsing placeholder. Compose these into the shape of the real layout while loading. */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-2xl bg-surface-2 motion-reduce:animate-none ${className}`} />;
+}
+
 export function EmptyState({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted">
+    <div className="flex flex-col items-center gap-2 rounded-3xl bg-surface px-6 py-10 text-center text-sm text-muted">
       {icon}
       {children}
     </div>
@@ -167,13 +172,13 @@ export function Sheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-background p-5 pb-8">
+      <div className="animate-fade-in absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="animate-sheet-up relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-background p-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border" />
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-muted hover:bg-surface-2" aria-label="Close">
-            <X size={20} />
+          <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted transition active:scale-95" aria-label="Close">
+            <X size={18} />
           </button>
         </div>
         <div className="flex flex-col gap-4">{children}</div>
@@ -220,7 +225,7 @@ const badgeStyles: Record<BadgeTone, string> = {
 
 export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${badgeStyles[tone]}`}>
       {children}
     </span>
   );
@@ -251,7 +256,7 @@ export function ProgressBar({ value, max, tone = "accent" }: { value: number; ma
   const pct = max === 0 ? 0 : Math.min(100, (value / max) * 100);
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-      <div className={`h-full rounded-full ${tone === "accent" ? "bg-accent" : "bg-positive"}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full rounded-full transition-[width] duration-500 ${tone === "accent" ? "bg-accent" : "bg-positive"}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
