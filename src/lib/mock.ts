@@ -60,6 +60,7 @@ const task = (id: string, chore_id: string, assigned_to: string, due: number, do
   flat_id: DEMO_FLAT_ID,
   assigned_to,
   due_at: due >= 0 ? inDays(due) : daysAgo(-due),
+  weight_snapshot: demoChores.find((c) => c.id === chore_id)!.weight,
   status: done ? "done" : "open",
   completed_by: done ? assigned_to : null,
   completed_at: done ? daysAgo(-due) : null,
