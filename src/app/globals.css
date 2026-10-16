@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — see DESIGN.md. Never hard-code colours in components;
+ * use the Tailwind classes these generate (bg-surface, text-muted, text-positive…).
+ */
+:root {
+  --background: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #efede8;
+  --border: #e4e1da;
+  --foreground: #1c1b19;
+  --muted: #6f6b63;
+
+  --accent: #5b4fe8;      /* brand / primary actions */
+  --accent-soft: #ecebfd;
+  --accent-fg: #ffffff;
+
+  --positive: #16803c;    /* you are owed, chore done */
+  --positive-soft: #e3f4e8;
+  --negative: #d1352b;    /* you owe, overdue */
+  --negative-soft: #fbe7e5;
+  --warning: #b86b00;     /* bounties, due soon */
+  --warning-soft: #fdf0dc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111110;
+    --surface: #1c1b1a;
+    --surface-2: #262523;
+    --border: #33312e;
+    --foreground: #f2f0ec;
+    --muted: #a29e96;
+
+    --accent: #8f86ff;
+    --accent-soft: #26244a;
+    --accent-fg: #111110;
+
+    --positive: #4ade80;
+    --positive-soft: #15301f;
+    --negative: #f87171;
+    --negative-soft: #3a1b19;
+    --warning: #fbbf24;
+    --warning-soft: #3a2c0e;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
