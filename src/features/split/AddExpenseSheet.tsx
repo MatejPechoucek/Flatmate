@@ -7,21 +7,54 @@ import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence, parsePounds } from "@/lib/money";
 import { Amount, Avatar, Button, Input, List, ListRow, SegmentedControl, Sheet } from "@/components/ui";
 import type { SplitType } from "@/lib/types";
-import { addExpense, computeShares, remaining, SplitError } from "./api";
+import { addExpense, computeShares, createRecurringExpense, editExpense, remaining, SplitError, type ExpenseWithShares } from "./api";
+import { startOfDayIso, type Interval } from "./schedule";
+
+/** Today as a yyyy-mm-dd date input value, in the user's timezone. */
+const todayInput = () => new Date().toLocaleDateString("en-CA");
+
+/** Who was "in" a saved expense. A payer holding only the leftover penny wasn't really in it. */
+function includedFrom(e: ExpenseWithShares): Set<string> {
+  const ids = new Set(e.expense_shares.map((s) => s.member_id));
+  const payerShare = e.expense_shares.find((s) => s.member_id === e.payer_id)?.amount_pence ?? 0;
+  const others = e.expense_shares.filter((s) => s.member_id !== e.payer_id).map((s) => s.amount_pence);
+  if (e.split_type === "equal" && payerShare > 0 && others.length && payerShare < Math.min(...others)) ids.delete(e.payer_id);
+  return ids;
+}
+
+/** The per-member £ / % text boxes for a saved expense. Percentages are rebuilt from pence. */
+function inputsFrom(e: ExpenseWithShares, included: Set<string>): Record<string, string> {
+  const rows = e.expense_shares.filter((s) => included.has(s.member_id));
+  if (e.split_type === "amount") return Object.fromEntries(rows.map((s) => [s.member_id, (s.amount_pence / 100).toFixed(2)]));
+  if (e.split_type !== "percent") return {};
+  const bp = rows.map((s) => Math.round((s.amount_pence * 10_000) / e.amount_pence));
+  if (bp.length) bp[bp.length - 1] += 10_000 - bp.reduce((a, b) => a + b, 0); // make it total exactly 100%
+  return Object.fromEntries(rows.map((s, i) => [s.member_id, String(bp[i] / 100)]));
+}
 
 /**
- * Add-expense bottom sheet. Mount it only while open (`{adding && <AddExpenseSheet …/>}`)
- * so every open starts with a fresh form.
+ * Add / edit expense bottom sheet. Pass `editing` to edit an existing expense.
+ * Mount it only while open (`{adding && <AddExpenseSheet …/>}`) so every open starts fresh.
  */
-export function AddExpenseSheet({ onClose, onSaved }: { onClose: () => void; onSaved?: () => void }) {
+export function AddExpenseSheet({
+  editing,
+  onClose,
+  onSaved,
+}: {
+  editing?: ExpenseWithShares;
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
   const { flat, members, me } = useFlat();
 
-  const [description, setDescription] = useState("");
-  const [amountText, setAmountText] = useState("");
-  const [payerId, setPayerId] = useState(me.id);
-  const [included, setIncluded] = useState<Set<string>>(() => new Set(members.map((m) => m.id)));
-  const [splitType, setSplitType] = useState<SplitType>("equal");
-  const [inputs, setInputs] = useState<Record<string, string>>({}); // per-member £ or % text
+  const [description, setDescription] = useState(editing?.description ?? "");
+  const [amountText, setAmountText] = useState(editing ? (editing.amount_pence / 100).toFixed(2) : "");
+  const [payerId, setPayerId] = useState(editing?.payer_id ?? me.id);
+  const [included, setIncluded] = useState<Set<string>>(() => (editing ? includedFrom(editing) : new Set(members.map((m) => m.id))));
+  const [splitType, setSplitType] = useState<SplitType>(editing?.split_type ?? "equal");
+  const [inputs, setInputs] = useState<Record<string, string>>(() => (editing ? inputsFrom(editing, includedFrom(editing)) : {})); // per-member £ or % text
+  const [repeat, setRepeat] = useState<"once" | Interval>("once");
+  const [startDate, setStartDate] = useState(todayInput);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -66,15 +99,23 @@ export function AddExpenseSheet({ onClose, onSaved }: { onClose: () => void; onS
     setSaving(true);
     setSaveError(null);
     try {
-      await addExpense({
-        flatId: flat.id,
-        payerId,
-        createdBy: me.id,
-        description,
-        amountPence,
-        splitType,
-        shares,
-      });
+      if (editing) {
+        await editExpense(editing.id, me.id, { description, amountPence, payerId, splitType, shares });
+      } else if (repeat === "once") {
+        await addExpense({ flatId: flat.id, payerId, createdBy: me.id, description, amountPence, splitType, shares });
+      } else {
+        await createRecurringExpense({
+          flatId: flat.id,
+          payerId,
+          description,
+          amountPence,
+          splitType,
+          values,
+          interval: repeat,
+          // Today → due right now, so the first bill appears immediately.
+          firstDueAt: startDate === todayInput() ? new Date().toISOString() : startOfDayIso(startDate),
+        });
+      }
       onSaved?.();
       onClose();
     } catch (e) {
@@ -86,7 +127,7 @@ export function AddExpenseSheet({ onClose, onSaved }: { onClose: () => void; onS
 
   // ─── Form ───
   return (
-    <Sheet open onClose={onClose} title="Add expense">
+    <Sheet open onClose={onClose} title={editing ? "Edit expense" : "Add expense"}>
       <Input label="What for? *" placeholder="Tesco big shop" required maxLength={60} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus />
       <Input
         label="Amount"
@@ -179,9 +220,42 @@ export function AddExpenseSheet({ onClose, onSaved }: { onClose: () => void; onS
 
       {saveError && <p className="text-sm text-negative">{saveError}</p>}
 
+      {!editing && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-muted">Repeats</span>
+          <SegmentedControl
+            options={[
+              { value: "once", label: "One-off" },
+              { value: "weekly", label: "Weekly" },
+              { value: "monthly", label: "Monthly" },
+            ]}
+            value={repeat}
+            onChange={setRepeat}
+          />
+        </div>
+      )}
+      {!editing && repeat !== "once" && (
+        <Input
+          label="First bill on"
+          type="date"
+          min={todayInput()}
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value || todayInput())}
+        />
+      )}
+
       <Button onClick={save} disabled={!canSave}>
-        {saving ? "Adding…" : amountPence ? `Add ${formatPence(amountPence)}` : "Add expense"}
+        {editing
+          ? saving
+            ? "Saving…"
+            : "Save changes"
+          : saving
+            ? "Adding…"
+            : amountPence
+              ? `Add ${formatPence(amountPence)}${repeat === "once" ? "" : ` ${repeat}`}`
+              : "Add expense"}
       </Button>
+      {editing && !missing && <p className="-mt-2 text-center text-xs text-muted">Everyone affected will see what you changed.</p>}
       {missing && <p className="-mt-2 text-center text-sm text-muted">{missing}</p>}
     </Sheet>
   );

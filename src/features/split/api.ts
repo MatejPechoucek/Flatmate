@@ -25,6 +25,16 @@ export interface NewExpense {
  * Buyout example: { payerId: doer, createdBy: doer, shares: { [offerer]: amount }, bountyId }.
  */
 export async function addExpense(input: NewExpense): Promise<Expense> {
+  return insertExpense(input);
+}
+
+/** Thrown when a recurring occurrence already exists (another device generated it first). */
+export class DuplicateOccurrence extends Error {}
+
+/** Shared by addExpense and recurring generation. Not for use outside Split. */
+export async function insertExpense(
+  input: NewExpense & { recurringExpenseId?: string; dueAt?: string },
+): Promise<Expense> {
   const description = input.description.trim();
   if (!description) throw new SplitError("Add a description.");
   if (!Number.isInteger(input.amountPence) || input.amountPence <= 0) throw new SplitError("Enter an amount above £0.");
@@ -43,9 +53,14 @@ export async function addExpense(input: NewExpense): Promise<Expense> {
       amount_pence: input.amountPence,
       split_type: input.splitType,
       bounty_id: input.bountyId ?? null,
+      recurring_expense_id: input.recurringExpenseId ?? null,
+      due_at: input.dueAt ?? null,
+      // Occurrences sit in history on their due date, not when they were generated.
+      ...(input.dueAt ? { created_at: input.dueAt } : {}),
     })
     .select()
     .single<Expense>();
+  if (error?.code === "23505") throw new DuplicateOccurrence(error.message);
   if (error) throw new Error(`Couldn't save the expense: ${error.message}`);
 
   const { error: sharesError } = await supabase
@@ -122,11 +137,20 @@ export async function recordSettlement(flatId: string, fromMember: string, toMem
   return data;
 }
 
-/**
- * CONTRACT (called by FlatProvider on open). Create every recurring expense occurrence whose
- * next_due_at <= now, then advance next_due_at. UNIQUE (recurring_expense_id, due_at) makes
- * concurrent calls safe — ignore duplicate-key errors.
- */
-export async function catchUpRecurringExpenses(flatId: string): Promise<void> {
-  void flatId; // TODO(split)
-}
+export {
+  catchUpRecurringExpenses,
+  createRecurringExpense,
+  deleteRecurringExpense,
+  getRecurringExpenses,
+  setRecurringActive,
+} from "./recurring";
+export {
+  cannotChange,
+  deleteExpense,
+  dismissNotice,
+  editExpense,
+  getExpenseChanges,
+  getMyNotices,
+  snapshotOf,
+} from "./edits";
+export { diffFor, type Diff } from "./changes";

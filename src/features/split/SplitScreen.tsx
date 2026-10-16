@@ -9,19 +9,28 @@ import type { Settlement } from "@/lib/types";
 import { shareOf, type ExpenseWithShares, type Transfer } from "./api";
 import { useExpenses } from "./useExpenses";
 import { useSettlements } from "./useSettlements";
+import { useRecurring } from "./useRecurring";
+import { RecurringSection } from "./RecurringSection";
 import { BalancesSection } from "./BalancesSection";
 import { AddExpenseSheet } from "./AddExpenseSheet";
 import { ExpenseDetailSheet } from "./ExpenseDetailSheet";
 import { SettleUpSheet } from "./SettleUpSheet";
+import { useNotices } from "./useNotices";
+import { NoticesBanner } from "./NoticesBanner";
 
 // Entry point for the Split tab (/flat/[flatId]/split).
 export function SplitScreen() {
   const { expenses, loading, error, reload } = useExpenses();
   const { settlements, error: settlementsError, reload: reloadSettlements } = useSettlements();
+  const { rules, reload: reloadRules } = useRecurring();
   const [adding, setAdding] = useState(false);
   const [settling, setSettling] = useState<Transfer | null>(null);
+  const { notices, dismiss } = useNotices();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // Looked up live, so a sheet closes by itself if the expense is deleted elsewhere.
   const opened = expenses?.find((e) => e.id === openId);
+  const editing = expenses?.find((e) => e.id === editingId);
 
   // Expenses and payments in one timeline, newest first.
   const history: HistoryItem[] = [
@@ -31,7 +40,11 @@ export function SplitScreen() {
 
   return (
     <div className="flex flex-col gap-6">
+      <NoticesBanner notices={notices} onDismiss={dismiss} onOpen={setOpenId} />
+
       <BalancesSection expenses={expenses} settlements={settlements} error={error ?? settlementsError} onSettle={setSettling} />
+
+      <RecurringSection rules={rules} />
 
       <Section title="History">
         {loading ? (
@@ -59,8 +72,26 @@ export function SplitScreen() {
       </Section>
 
       <Fab label="Add expense" onClick={() => setAdding(true)} />
-      {adding && <AddExpenseSheet onClose={() => setAdding(false)} onSaved={reload} />}
-      {opened && <ExpenseDetailSheet expense={opened} onClose={() => setOpenId(null)} />}
+      {adding && (
+        <AddExpenseSheet
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            reload();
+            reloadRules();
+          }}
+        />
+      )}
+      {editing ? (
+        <AddExpenseSheet editing={editing} onClose={() => setEditingId(null)} onSaved={reload} />
+      ) : (
+        opened && (
+          <ExpenseDetailSheet
+            expense={opened}
+            onClose={() => setOpenId(null)}
+            onEdit={() => setEditingId(opened.id)}
+          />
+        )
+      )}
       {settling && <SettleUpSheet transfer={settling} onClose={() => setSettling(null)} onSaved={reloadSettlements} />}
     </div>
   );

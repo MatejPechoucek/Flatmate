@@ -1,7 +1,7 @@
 // Demo-flat data for the Split tab (shares included). Used when flat.id === DEMO_FLAT_ID.
 // Tuned so "you" (Alex) owe Priya £9.50 — enough to demo Settle up.
 import { DEMO_FLAT_ID, demoExpenses } from "@/lib/mock";
-import type { Settlement } from "@/lib/types";
+import type { ExpenseChange, RecurringExpense, Settlement } from "@/lib/types";
 import type { ExpenseWithShares } from "./api";
 
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
@@ -49,4 +49,49 @@ export const demoSplitExpenses: ExpenseWithShares[] = [...withoutShareField, tak
 
 export const demoSettlements: Settlement[] = [
   { id: "s1", flat_id: DEMO_FLAT_ID, from_member: "m-tom", to_member: "m-alex", amount_pence: 500, created_at: daysAgo(3) },
+];
+
+const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+
+export const demoRecurring: RecurringExpense[] = [
+  {
+    id: "r1",
+    flat_id: DEMO_FLAT_ID,
+    payer_id: "m-sam",
+    description: "Wi-Fi",
+    amount_pence: 3200,
+    split_type: "equal",
+    split_config: { "m-alex": 0, "m-sam": 0, "m-priya": 0, "m-tom": 0 },
+    interval: "monthly",
+    next_due_at: inDays(28),
+    active: true,
+    created_at: daysAgo(60),
+  },
+  {
+    id: "r2",
+    flat_id: DEMO_FLAT_ID,
+    payer_id: "m-alex",
+    description: "Netflix",
+    amount_pence: 1299,
+    split_type: "equal",
+    split_config: { "m-alex": 0, "m-priya": 0 },
+    interval: "monthly",
+    next_due_at: inDays(9),
+    active: false,
+    created_at: daysAgo(30),
+  },
+];
+
+/** Priya edited "Cleaning supplies" 4 days ago — shows the notice banner + history. */
+export const demoChanges: ExpenseChange[] = [
+  {
+    id: "c1",
+    flat_id: DEMO_FLAT_ID,
+    expense_id: "e3",
+    changed_by: "m-priya",
+    kind: "edit",
+    before: { description: "Cleaning stuff", amount_pence: 950, payer_id: "m-priya", shares: { "m-alex": 285, "m-sam": 285, "m-priya": 380 } },
+    after: { description: "Cleaning supplies", amount_pence: 1150, payer_id: "m-priya", shares: { "m-alex": 345, "m-sam": 345, "m-priya": 460 } },
+    created_at: daysAgo(4),
+  },
 ];
