@@ -1,17 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Home, Receipt, Sparkles } from "lucide-react";
 import { Button, Card, Input, SegmentedControl } from "@/components/ui";
 import { DEMO_FLAT_ID } from "@/lib/mock";
+import { createFlat } from "./api";
 
 export function LandingScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<"create" | "join">("create");
+  const [flatName, setFlatName] = useState("");
+  const [name, setName] = useState("");
+  const [payHandle, setPayHandle] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: create flat + member in Supabase, setMemberId, then route to /flat/[id].
   const enterDemo = () => router.push(`/flat/${DEMO_FLAT_ID}`);
+
+  const onCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const { flat } = await createFlat({ flatName, memberName: name, payHandle });
+      // Land on settings so the creator can show the QR code straight away.
+      router.push(`/flat/${flat.id}/settings`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong, try again");
+      setBusy(false);
+    }
+  };
+
+  const onJoin = (e: FormEvent) => {
+    e.preventDefault();
+    const c = code.trim().toUpperCase();
+    if (c) router.push(`/join/${c}`);
+  };
 
   return (
     <main className="flex flex-1 flex-col px-5 pb-10 pt-16">
@@ -45,19 +71,43 @@ export function LandingScreen() {
             { value: "join", label: "Join a flat" },
           ]}
           value={mode}
-          onChange={setMode}
+          onChange={(m) => {
+            setMode(m);
+            setError(null);
+          }}
         />
         {mode === "create" ? (
-          <>
-            <Input label="Flat name" placeholder="14 Gower Street" />
-            <Input label="Your name" placeholder="Alex" />
-            <Button onClick={enterDemo}>Create flat</Button>
-          </>
+          <form onSubmit={onCreate} className="flex flex-col gap-4">
+            <Input label="Flat name" placeholder="14 Gower Street" value={flatName} onChange={(e) => setFlatName(e.target.value)} required />
+            <Input label="Your name" placeholder="Alex" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              label="Monzo.me username (optional)"
+              placeholder="so flatmates can pay you back"
+              value={payHandle}
+              onChange={(e) => setPayHandle(e.target.value)}
+              autoCapitalize="none"
+            />
+            {error && <p className="text-sm text-negative">{error}</p>}
+            <Button type="submit" disabled={busy || !flatName.trim() || !name.trim()}>
+              {busy ? "Creating…" : "Create flat"}
+            </Button>
+          </form>
         ) : (
-          <>
-            <Input label="Invite code" placeholder="K7PX2Q" className="font-mono uppercase tracking-widest" />
-            <Button onClick={enterDemo}>Continue</Button>
-          </>
+          <form onSubmit={onJoin} className="flex flex-col gap-4">
+            <Input
+              label="Invite code"
+              placeholder="K7PX2Q"
+              className="font-mono uppercase tracking-widest"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              maxLength={6}
+              autoCapitalize="characters"
+              autoComplete="off"
+            />
+            <Button type="submit" disabled={code.trim().length < 6}>
+              Continue
+            </Button>
+          </form>
         )}
       </div>
 

@@ -1,88 +1,171 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Coins } from "lucide-react";
+import { CheckCircle2, ChevronRight, Coins, Receipt } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
-import { Amount, Avatar, Badge, List, ListRow, Section, WeightDots } from "@/components/ui";
-import { demoActivity, demoBalances, demoBounties, demoChores, demoTasks } from "@/lib/mock";
+import { Amount, Avatar, Badge, EmptyState, List, ListRow, Section, WeightDots } from "@/components/ui";
+import { DEMO_FLAT_ID, demoActivity, demoBalances, demoBounties, demoChores, demoTasks } from "@/lib/mock";
+import { useRealtime } from "@/lib/useRealtime";
 import { dueLabel, timeAgo } from "@/lib/dates";
 import { formatPence } from "@/lib/money";
+import type { Bounty, Chore, ChoreTask } from "@/lib/types";
+import { getBalances } from "@/features/split/api";
+import { getOpenBounties, getOpenTasks } from "@/features/chores/api";
+import { getActivity } from "./api";
+
+type TaskWithChore = ChoreTask & { chore: Chore };
+type BountyWithTask = Bounty & { task: ChoreTask; chore: Chore };
+type FeedItem = { id: string; member_id: string; text: string; at: string; icon: "expense" | "chore" };
+
+interface HomeData {
+  net: number;
+  myTasks: TaskWithChore[];
+  bounties: BountyWithTask[];
+  activity: FeedItem[];
+}
+
+const demoData = (meId: string): HomeData => {
+  const choreOf = (id: string) => demoChores.find((c) => c.id === id)!;
+  return {
+    net: demoBalances.reduce((sum, b) => sum + b.pence, 0),
+    myTasks: demoTasks.filter((t) => t.assigned_to === meId && t.status === "open").map((t) => ({ ...t, chore: choreOf(t.chore_id) })),
+    bounties: demoBounties.map((b) => {
+      const task = demoTasks.find((x) => x.id === b.task_id)!;
+      return { ...b, task, chore: choreOf(task.chore_id) };
+    }),
+    activity: demoActivity.map((a) => ({ ...a, icon: "expense" })),
+  };
+};
+
+/** Run a teammate's query; until it's implemented (throws TODO) fall back quietly. */
+async function soft<T>(p: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await p;
+  } catch (err) {
+    console.info("[home] using fallback:", err instanceof Error ? err.message : err);
+    return fallback;
+  }
+}
 
 // Home: a summary of both features. Each card links into its tab.
-// TODO: replace demo* data with real queries once Split and Chores expose them.
 export function HomeScreen() {
   const { flat, me, memberName, realName } = useFlat();
-  const net = demoBalances.reduce((sum, b) => sum + b.pence, 0);
-  const myTasks = demoTasks.filter((t) => t.assigned_to === me.id && t.status === "open");
-  const choreOf = (id: string) => demoChores.find((c) => c.id === id)!;
+  const isDemo = flat.id === DEMO_FLAT_ID;
+  const [data, setData] = useState<HomeData | null>(isDemo ? demoData(me.id) : null);
+
+  const load = useCallback(async () => {
+    if (isDemo) return;
+    const [balances, myTasks, bounties, activity] = await Promise.all([
+      soft(getBalances(flat.id, me.id), []),
+      soft(getOpenTasks(flat.id, me.id), []),
+      soft(getOpenBounties(flat.id), []),
+      soft(getActivity(flat.id), []),
+    ]);
+    setData({
+      net: balances.reduce((sum, b) => sum + b.pence, 0),
+      myTasks,
+      bounties,
+      activity: activity.map((a) => ({
+        id: a.id,
+        member_id: a.member_id,
+        at: a.at,
+        icon: a.kind,
+        text: a.kind === "expense" ? `added ${a.expense.description} · ${formatPence(a.expense.amount_pence)}` : `did ${a.title}`,
+      })),
+    });
+  }, [flat.id, me.id, isDemo]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch from Supabase
+    load();
+  }, [load]);
+
+  useRealtime(flat.id, isDemo ? [] : ["expenses", "settlements", "chore_tasks", "bounties"], load);
+
+  if (!data) return <p className="p-6 text-center text-muted">Loading…</p>;
+  const { net, myTasks, bounties, activity } = data;
 
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/flat/${flat.id}/split`}>
         <div className="flex items-center justify-between rounded-2xl bg-accent p-5 text-accent-fg shadow-lg shadow-accent/20">
           <div>
-            <p className="text-sm opacity-80">{net >= 0 ? "You're owed" : "You owe"}</p>
+            <p className="text-sm opacity-80">{net === 0 ? "You're all square" : net > 0 ? "You're owed" : "You owe"}</p>
             <p className="text-3xl font-bold tabular-nums">{formatPence(Math.abs(net))}</p>
           </div>
           <ChevronRight className="opacity-80" />
         </div>
       </Link>
 
-      <Section title="Your next chores">
-        <List>
-          {myTasks.map((t) => {
-            const chore = choreOf(t.chore_id);
-            const due = dueLabel(t.due_at);
-            return (
-              <ListRow
-                key={t.id}
-                title={chore.title}
-                subtitle={<WeightDots weight={chore.weight} />}
-                trailing={<Badge tone={due.overdue ? "negative" : "neutral"}>{due.text}</Badge>}
-              />
-            );
-          })}
-        </List>
-      </Section>
-
-      {demoBounties.length > 0 && (
-        <Section title="Up for grabs">
+      <Section
+        title="Your next chores"
+        action={
+          <Link href={`/flat/${flat.id}/chores`} className="text-sm font-medium text-accent">
+            All chores
+          </Link>
+        }
+      >
+        {myTasks.length === 0 ? (
+          <EmptyState>Nothing on your list. Enjoy it.</EmptyState>
+        ) : (
           <List>
-            {demoBounties.map((b) => {
-              const t = demoTasks.find((x) => x.id === b.task_id)!;
+            {myTasks.map((t) => {
+              const due = dueLabel(t.due_at);
               return (
                 <ListRow
-                  key={b.id}
+                  key={t.id}
+                  title={t.chore.title}
+                  subtitle={<WeightDots weight={t.chore.weight} />}
+                  trailing={<Badge tone={due.overdue ? "negative" : "neutral"}>{due.text}</Badge>}
+                />
+              );
+            })}
+          </List>
+        )}
+      </Section>
+
+      {bounties.length > 0 && (
+        <Section title="Up for grabs">
+          <List>
+            {bounties.map((b) => (
+              <Link key={b.id} href={`/flat/${flat.id}/chores`} className="block">
+                <ListRow
                   leading={
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-warning-soft text-warning">
                       <Coins size={18} />
                     </span>
                   }
-                  title={choreOf(t.chore_id).title}
+                  title={b.chore.title}
                   subtitle={`${memberName(b.offered_by)} will pay`}
                   trailing={<Amount pence={b.amount_pence} className="text-warning" />}
                 />
-              );
-            })}
+              </Link>
+            ))}
           </List>
         </Section>
       )}
 
       <Section title="Activity">
-        <List>
-          {demoActivity.map((a) => (
-            <ListRow
-              key={a.id}
-              leading={<Avatar name={realName(a.member_id)} />}
-              title={
-                <span className="font-normal">
-                  <span className="font-medium">{memberName(a.member_id)}</span> {a.text}
-                </span>
-              }
-              subtitle={timeAgo(a.at)}
-            />
-          ))}
-        </List>
+        {activity.length === 0 ? (
+          <EmptyState icon={<Receipt size={20} />}>Add an expense or finish a chore and it&apos;ll show up here.</EmptyState>
+        ) : (
+          <List>
+            {activity.map((a) => (
+              <ListRow
+                key={a.id}
+                leading={<Avatar name={realName(a.member_id)} />}
+                title={
+                  <span className="font-normal">
+                    <span className="font-medium">{memberName(a.member_id)}</span> {a.text}
+                  </span>
+                }
+                subtitle={timeAgo(a.at)}
+                trailing={a.icon === "chore" && <CheckCircle2 size={18} className="text-positive" />}
+              />
+            ))}
+          </List>
+        )}
       </Section>
     </div>
   );
