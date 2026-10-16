@@ -2,7 +2,7 @@
 
 **Flat life, minus the awkward.** Split bills and share chores fairly with your flatmates. The app does the chasing, so nobody has to be the bad guy.
 
-**Live:** [flatmate-gules.vercel.app](https://flatmate-gules.vercel.app) · **Try it without signing up:** [/flat/demo](https://flatmate-gules.vercel.app/flat/demo)
+**Live:** [flatmate-gules.vercel.app](https://flatmate-gules.vercel.app)
 
 ## Why
 
@@ -17,8 +17,6 @@ Shared living rarely falls apart over maths. It falls apart over the conversatio
 - **Edit history:** if someone edits or deletes an expense you're part of, you get a notice showing what changed.
 - **No sign-up:** join with an invite link, QR code or 6-letter code, plus your name. Your identity is remembered on that device.
 - **Live everywhere:** changes from other flatmates appear instantly (Supabase Realtime). Mobile-first, with a sidebar layout on desktop and light and dark themes.
-
-The **demo flat** (`/flat/demo`) runs fully in memory, with no database. You can add expenses, settle up, finish chores, and offer or take bounties. Refreshing the page resets it.
 
 ## Run it locally
 
@@ -77,9 +75,8 @@ src/app/                 routes: / (landing), /join/[code], /flat/[flatId]/{spli
 src/features/flat/       create and join, Home summary, flat settings, activity feed
 src/features/split/      expenses, balances, recurring bills, settle up, edit notices
 src/features/chores/     chore board, fairness, assignment, buyouts
-  */demoStore.ts         in-memory stand-in for the database on /flat/demo
 src/components/ui.tsx    shared UI kit, used by every screen
-src/lib/                 Supabase client, types, flat context, realtime, money and date helpers, demo data
+src/lib/                 Supabase client, types, flat context, realtime, money and date helpers
 supabase/                schema.sql, migrations/, seed.sql
 tests/                   database and Playwright tests
 ```

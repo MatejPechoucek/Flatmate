@@ -34,7 +34,6 @@ Every mutation RPC returns `{ flat_id, task_ids, chore_id?, bounty_id?, expense_
 - Offer price snapshots task weight × flat rate (default 100 pence per point). Acceptance creates debt; completion credits the original offerer. Accepted buyouts cannot be cancelled or offered again.
 - No credits, rewards, claiming, reservations, away mode, voting, objections or bounty raises. No real payments.
 - Name/localStorage identity is the agreed hackathon trust model, not authentication. A caller with another member's UUID can impersonate them. Read access remains demo-permissive.
-- `/flat/demo/chores` shows an explicit connection prompt; live mutations require a real joined flat.
 
 ## Verification
 

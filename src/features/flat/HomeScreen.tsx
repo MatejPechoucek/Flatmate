@@ -5,15 +5,12 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, Coins, Receipt } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
 import { Amount, Avatar, Badge, EmptyState, List, ListRow, Section, Skeleton, WeightDots } from "@/components/ui";
-import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import { dueLabel, timeAgo } from "@/lib/dates";
 import { formatPence } from "@/lib/money";
 import type { Bounty, Chore, ChoreTask } from "@/lib/types";
-import { balancesFor, getBalances, netBalances, simplifyDebts } from "@/features/split/api";
-import { getDemoExpenses, getDemoSettlements } from "@/features/split/demoStore";
+import { getBalances } from "@/features/split/api";
 import { getChoreBoard } from "@/features/chores/api";
-import { demoChoreBoard } from "@/features/chores/demoStore";
 import type { ChoreBoard } from "@/features/chores/types";
 import { getActivity, type ActivityItem } from "./api";
 
@@ -50,23 +47,6 @@ function toFeed(items: ActivityItem[]): FeedItem[] {
   }));
 }
 
-/** Demo flat: read the same in-memory stores Split and Chores use, so every tab agrees. */
-const demoData = (meId: string): HomeData => {
-  const expenses = getDemoExpenses().filter((e) => !e.deleted_at);
-  const board = demoChoreBoard();
-  const activity: ActivityItem[] = [
-    ...expenses.map((e) => ({ id: `e:${e.id}`, kind: "expense" as const, member_id: e.payer_id, at: e.created_at, expense: e })),
-    ...board.tasks
-      .filter((t) => t.status === "done")
-      .map((t) => ({ id: `t:${t.id}`, kind: "chore" as const, member_id: t.completed_by ?? "", at: t.completed_at ?? t.created_at, title: t.title })),
-  ];
-  return {
-    net: balancesFor(simplifyDebts(netBalances(expenses, getDemoSettlements())), meId).reduce((sum, b) => sum + b.pence, 0),
-    ...fromBoard(board, meId),
-    activity: toFeed(activity.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 15)),
-  };
-};
-
 /** Run a teammate's query; until it's implemented (throws TODO) fall back quietly. */
 async function soft<T>(p: Promise<T>, fallback: T): Promise<T> {
   try {
@@ -82,26 +62,23 @@ const emptyBoard: ChoreBoard = { flat: { id: "", name: "", buyout_rate_pence: 0 
 // Home: a summary of both features. Each card links into its tab.
 export function HomeScreen() {
   const { flat, me, memberName, realName } = useFlat();
-  const isDemo = flat.id === DEMO_FLAT_ID;
   const [data, setData] = useState<HomeData | null>(null);
 
   const load = useCallback(async () => {
-    // Demo data is built in the browser only (never on the server), so dates can't mismatch on hydration.
-    if (isDemo) return setData(demoData(me.id));
     const [balances, board, activity] = await Promise.all([
       soft(getBalances(flat.id, me.id), []),
       soft(getChoreBoard(flat.id, me.id), emptyBoard),
       soft(getActivity(flat.id), []),
     ]);
     setData({ net: balances.reduce((sum, b) => sum + b.pence, 0), ...fromBoard(board, me.id), activity: toFeed(activity) });
-  }, [flat.id, me.id, isDemo]);
+  }, [flat.id, me.id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch from Supabase
     load();
   }, [load]);
 
-  useRealtime(flat.id, isDemo ? [] : ["expenses", "settlements", "chore_tasks", "bounties"], load);
+  useRealtime(flat.id, ["expenses", "settlements", "chore_tasks", "bounties"], load);
 
   if (!data) return <HomeSkeleton />;
   const { net, myTasks, bounties, activity } = data;

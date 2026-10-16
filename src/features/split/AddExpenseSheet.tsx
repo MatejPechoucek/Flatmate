@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
-import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence, parsePounds } from "@/lib/money";
 import { Amount, Avatar, Button, Input, List, ListRow, SegmentedControl, Sheet } from "@/components/ui";
 import type { SplitType } from "@/lib/types";
 import { addExpense, computeShares, createRecurringExpense, editExpense, remaining, SplitError, type ExpenseWithShares } from "./api";
 import { startOfDayIso, type Interval } from "./schedule";
-import { demoAddExpense, demoCreateRecurring, demoEditExpense } from "./demoStore";
 
 /** Today as a yyyy-mm-dd date input value, in the user's timezone. */
 const todayInput = () => new Date().toLocaleDateString("en-CA");
@@ -101,12 +99,7 @@ export function AddExpenseSheet({
     try {
       const firstDueAt = startDate === todayInput() ? new Date().toISOString() : startOfDayIso(startDate); // today → due now
       const recurring = { payerId, description, amountPence, splitType, values, interval: repeat as Interval, firstDueAt };
-      if (flat.id === DEMO_FLAT_ID) {
-        // Demo flat: same actions against the in-memory store.
-        if (editing) demoEditExpense(editing.id, me.id, { description, amountPence, payerId, splitType, shares });
-        else if (repeat === "once") demoAddExpense({ flatId: flat.id, payerId, createdBy: me.id, description, amountPence, splitType, shares });
-        else demoCreateRecurring(recurring);
-      } else if (editing) {
+      if (editing) {
         await editExpense(editing.id, me.id, { description, amountPence, payerId, splitType, shares });
       } else if (repeat === "once") {
         await addExpense({ flatId: flat.id, payerId, createdBy: me.id, description, amountPence, splitType, shares });

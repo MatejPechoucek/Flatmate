@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, Coins, Repeat } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
 import { useRealtime } from "@/lib/useRealtime";
@@ -8,19 +8,7 @@ import { dueLabel, timeAgo } from "@/lib/dates";
 import { formatPence } from "@/lib/money";
 import { Amount, Avatar, Badge, Button, Card, EmptyState, Fab, Input, List, ListRow, ProgressBar, Section, SegmentedControl, Sheet, WeightDots } from "@/components/ui";
 import { acceptBounty, cancelBounty, catchUpChores, completeTask, createChore, getChoreBoard, offerBounty } from "./api";
-import { demoAcceptBounty, demoCancelBounty, demoChoreBoard, demoCompleteTask, demoCreateChore, demoOfferBounty, getDemoChoreState, subscribeDemoChores } from "./demoStore";
 import type { ChoreBoard, MutationResult, Task } from "./types";
-
-/** Same calls as ./api, but against the in-memory demo store (see demoStore). */
-const demoOps = {
-  getChoreBoard: async () => demoChoreBoard(),
-  completeTask: async (taskId: string, memberId: string) => demoCompleteTask(taskId, memberId),
-  offerBounty: async (taskId: string, memberId: string) => ({ mutation: demoOfferBounty(taskId, memberId) }),
-  acceptBounty: async (bountyId: string, memberId: string) => demoAcceptBounty(bountyId, memberId),
-  cancelBounty: async (bountyId: string, memberId: string) => demoCancelBounty(bountyId, memberId),
-  createChore: async (input: Parameters<typeof createChore>[0]) => ({ mutation: demoCreateChore(input) }),
-};
-const realOps = { getChoreBoard, completeTask, offerBounty, acceptBounty, cancelBounty, createChore };
 
 export function ChoresScreen() {
   const { flat, me } = useFlat();
@@ -41,28 +29,18 @@ export function ChoresTab({ flatId, memberId, onMutation }: {
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const request = useRef(0);
-  const demo = flatId === "demo";
-  const ops = demo ? demoOps : realOps;
-  // Demo flat: re-read the board whenever the in-memory store changes.
-  const demoState = useSyncExternalStore(subscribeDemoChores, getDemoChoreState, getDemoChoreState);
 
   const reload = useCallback(async () => {
     const current = ++request.current;
     try {
-      const next = await (demo ? demoOps : realOps).getChoreBoard(flatId, memberId);
+      const next = await getChoreBoard(flatId, memberId);
       if (current === request.current) { setBoard(next); setNow(Date.now()); setLoadError(null); }
     } catch (e) {
       if (current === request.current) setLoadError(e instanceof Error ? e.message : "Could not load chores.");
     }
-  }, [demo, flatId, memberId]);
+  }, [flatId, memberId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- demo board comes from the in-memory store
-    if (demo) void reload();
-  }, [demo, demoState, reload]);
-
-  useEffect(() => {
-    if (demo) return;
     // Initial fetch, catch-up on return, and a fallback for missed Realtime messages.
     const refresh = async () => {
       try { await catchUpChores(flatId); }
@@ -77,9 +55,9 @@ export function ChoresTab({ flatId, memberId, onMutation }: {
       // This is a request sequence, not a DOM ref: invalidate in-flight responses.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       ++request.current; clearInterval(timer); window.removeEventListener("focus", focus); };
-  }, [demo, flatId, reload]);
+  }, [flatId, reload]);
 
-  useRealtime(flatId, demo ? [] : ["chores", "chore_tasks", "bounties", "members"], reload);
+  useRealtime(flatId, ["chores", "chore_tasks", "bounties", "members"], reload);
 
   async function mutate(action: () => Promise<MutationResult>, message: string) {
     if (pending.current) return false;
@@ -120,10 +98,10 @@ export function ChoresTab({ flatId, memberId, onMutation }: {
       />
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
         {done ? <p className="text-xs text-muted">Done by {name(t.completed_by)} · {t.completed_at && timeAgo(t.completed_at)} · {t.weight_snapshot} pts credited to {name(t.points_credited_to)}</p> : <>
-          {t.assigned_to === memberId && <Button className="min-h-11" size="sm" disabled={busy} onClick={() => mutate(() => ops.completeTask(t.id, memberId), "Task completed. Fairness updated.")}><Check size={16} />Mark done</Button>}
+          {t.assigned_to === memberId && <Button className="min-h-11" size="sm" disabled={busy} onClick={() => mutate(() => completeTask(t.id, memberId), "Task completed. Fairness updated.")}><Check size={16} />Mark done</Button>}
           {t.assigned_to === memberId && !bounty && <Button className="min-h-11" size="sm" variant="secondary" disabled={busy}
             aria-label={`Offer ${formatPence(t.weight_snapshot * board!.flat.buyout_rate_pence)} bounty`}
-            onClick={() => mutate(async () => (await ops.offerBounty(t.id, memberId)).mutation, "Bounty offered to your flatmates.")}>
+            onClick={() => mutate(async () => (await offerBounty(t.id, memberId)).mutation, "Bounty offered to your flatmates.")}>
             <Coins size={16} />Offer <Amount pence={t.weight_snapshot * board!.flat.buyout_rate_pence} />
           </Button>}
           {bounty?.status === "open" && <Badge tone="warning">Bounty open · <Amount pence={bounty.amount_pence} /></Badge>}
@@ -147,8 +125,8 @@ export function ChoresTab({ flatId, memberId, onMutation }: {
         title={board.tasks.find(t => t.id === b.task_id)?.title}
         subtitle={<>{name(b.offered_by)} offers <Amount pence={b.amount_pence} /></>}
         trailing={b.offered_by === memberId
-          ? <Button className="min-h-11" size="sm" variant="secondary" disabled={busy} onClick={() => mutate(() => ops.cancelBounty(b.id, memberId), "Offer cancelled.")}>Cancel offer</Button>
-          : <Button className="min-h-11" size="sm" disabled={busy} aria-label={`Accept for ${formatPence(b.amount_pence)}`} onClick={() => mutate(() => ops.acceptBounty(b.id, memberId), "Task reassigned and debt recorded.")}>Take it</Button>}
+          ? <Button className="min-h-11" size="sm" variant="secondary" disabled={busy} onClick={() => mutate(() => cancelBounty(b.id, memberId), "Offer cancelled.")}>Cancel offer</Button>
+          : <Button className="min-h-11" size="sm" disabled={busy} aria-label={`Accept for ${formatPence(b.amount_pence)}`} onClick={() => mutate(() => acceptBounty(b.id, memberId), "Task reassigned and debt recorded.")}>Take it</Button>}
       />)}</List> : <EmptyState>No open offers. Offer a bounty on one of your tasks when you need a hand.</EmptyState>}
       {accepted.length > 0 && <div className="mt-3"><List>{accepted.map(b => <ListRow key={b.id}
         title={<span className="whitespace-normal"><Amount pence={b.amount_pence} /> buyout recorded: {name(b.offered_by)} → {name(b.accepted_by)}</span>}
@@ -169,7 +147,7 @@ export function ChoresTab({ flatId, memberId, onMutation }: {
     </List><p className="mt-2 text-xs text-muted">Tasks appear when due. Completing a task doesn’t change its schedule.</p></Section>}
     <Fab label="Add chore" onClick={() => setAdding(true)} />
     {adding && <AddChoreSheet busy={busy} error={error} onClose={() => { if (!busy) setAdding(false); }} onCreate={async input => {
-      const saved = await mutate(async () => (await ops.createChore({ ...input, flatId, createdBy: memberId })).mutation, "Chore saved. Due tasks have been assigned.");
+      const saved = await mutate(async () => (await createChore({ ...input, flatId, createdBy: memberId })).mutation, "Chore saved. Due tasks have been assigned.");
       if (saved) setAdding(false);
     }} />}
   </div>;

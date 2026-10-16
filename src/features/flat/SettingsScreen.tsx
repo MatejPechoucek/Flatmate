@@ -5,7 +5,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { Check, Copy } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
 import { Avatar, Badge, Button, Card, Input, List, ListRow, Section, Sheet } from "@/components/ui";
-import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence, parsePounds } from "@/lib/money";
 import { updateBuyoutRate } from "./api";
 
@@ -100,7 +99,6 @@ function RateSheet({
   const save = async (e: FormEvent) => {
     e.preventDefault();
     if (!pence) return;
-    if (flatId === DEMO_FLAT_ID) return setError("The demo flat is read-only");
     setBusy(true);
     setError(null);
     try {

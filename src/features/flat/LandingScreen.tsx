@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Home, Receipt, Sparkles } from "lucide-react";
 import { Button, Card, Input, SegmentedControl } from "@/components/ui";
-import { DEMO_FLAT_ID } from "@/lib/mock";
 import { createFlat } from "./api";
 
 export function LandingScreen() {
@@ -17,7 +16,6 @@ export function LandingScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const enterDemo = () => router.push(`/flat/${DEMO_FLAT_ID}`);
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -115,9 +113,6 @@ export function LandingScreen() {
           )}
         </div>
 
-        <button onClick={enterDemo} className="mt-auto pt-10 text-sm font-medium text-accent">
-          Peek at a demo flat →
-        </button>
       </div>
     </main>
   );

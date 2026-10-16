@@ -141,10 +141,3 @@ test('only the assignee sees task actions and cancelling an offer restores the o
     await otherContext.close();
   }
 });
-
-test('demo chores explain the connected-flat requirement without exposing mutations', async ({page}) => {
-  await page.goto('/flat/demo/chores');
-  await expect(page.getByText('Chore actions need a connected flat.', {exact:false})).toBeVisible();
-  await expect(page.getByRole('button', {name:'Add chore', exact:true})).toHaveCount(0);
-  await expect(page.getByRole('button', {name:'Mark done', exact:true})).toHaveCount(0);
-});

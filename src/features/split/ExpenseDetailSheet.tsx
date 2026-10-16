@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { Lock, PencilLine, Repeat, Trash2 } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
-import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence } from "@/lib/money";
 import { timeAgo } from "@/lib/dates";
 import type { ExpenseChange } from "@/lib/types";
 import { Amount, Avatar, Badge, Button, List, ListRow, Section, Sheet } from "@/components/ui";
 import { cannotChange, creatorOf, deleteExpense, getExpenseChanges, type ExpenseWithShares } from "./api";
 import { ChangeText } from "./ChangeText";
-import { demoDeleteExpense, getDemoChanges, subscribeDemo } from "./demoStore";
 
 const splitLabel = { equal: "Split equally", amount: "Split by amount", percent: "Split by percentage" } as const;
 
@@ -24,31 +22,25 @@ export function ExpenseDetailSheet({
   onClose: () => void;
   onEdit: () => void;
 }) {
-  const { flat, me, memberName, realName } = useFlat();
-  const isDemo = flat.id === DEMO_FLAT_ID;
+  const { me, memberName, realName } = useFlat();
   const shares = [...expense.expense_shares].sort((a, b) => b.amount_pence - a.amount_pence);
   const blocked = cannotChange(expense, me.id);
 
-  const [fetched, setFetched] = useState<ExpenseChange[]>([]);
-  const demoChanges = useSyncExternalStore(subscribeDemo, getDemoChanges, getDemoChanges); // demo flat: in-memory
-  const demoHistory = useMemo(() => demoChanges.filter((c) => c.expense_id === expense.id), [demoChanges, expense.id]);
-  const history = isDemo ? demoHistory : fetched;
+  const [history, setHistory] = useState<ExpenseChange[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Refetch when the expense is edited (edited_at changes) while the sheet is open.
   useEffect(() => {
-    if (isDemo) return;
-    getExpenseChanges(expense.id).then(setFetched).catch(console.error);
-  }, [expense.id, expense.edited_at, isDemo]);
+    getExpenseChanges(expense.id).then(setHistory).catch(console.error);
+  }, [expense.id, expense.edited_at]);
 
   async function remove() {
     setBusy(true);
     setError(null);
     try {
-      if (isDemo) demoDeleteExpense(expense.id, me.id);
-      else await deleteExpense(expense.id, me.id);
+      await deleteExpense(expense.id, me.id);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't delete.");
