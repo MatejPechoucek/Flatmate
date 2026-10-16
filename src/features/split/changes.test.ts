@@ -1,7 +1,7 @@
 // Run: npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diffFor, isNoticeFor, type ChangeLike } from "./changes.ts";
+import { cannotChange, diffFor, isNoticeFor, type ChangeLike } from "./changes.ts";
 
 const before = { description: "Tesco shop", amount_pence: 4260, payer_id: "A", shares: { A: 1065, B: 1065, C: 1065, D: 1065 } };
 
@@ -53,4 +53,13 @@ test("delete has no diff but notifies participants", () => {
   const c: ChangeLike = { changed_by: "A", kind: "delete", before, after: null };
   assert.equal(isNoticeFor(c, "C"), true);
   assert.deepEqual(diffFor(c, "C"), []);
+});
+
+test("cannotChange: creator only, missing creator falls back to the payer, buyouts locked", () => {
+  const e = { payer_id: "A", created_by: "B", bounty_id: null, deleted_at: null };
+  assert.equal(cannotChange(e, "B"), null);
+  assert.match(cannotChange(e, "A")!, /Only the person who added/);
+  assert.equal(cannotChange({ ...e, created_by: null }, "A"), null); // seed / SQL-inserted rows
+  assert.match(cannotChange({ ...e, bounty_id: "x" }, "B")!, /buyouts/);
+  assert.match(cannotChange({ ...e, deleted_at: "2026-10-16" }, "B")!, /deleted/);
 });

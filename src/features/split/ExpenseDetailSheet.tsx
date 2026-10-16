@@ -8,7 +8,7 @@ import { formatPence } from "@/lib/money";
 import { timeAgo } from "@/lib/dates";
 import type { ExpenseChange } from "@/lib/types";
 import { Amount, Avatar, Badge, Button, List, ListRow, Section, Sheet } from "@/components/ui";
-import { cannotChange, deleteExpense, getExpenseChanges, type ExpenseWithShares } from "./api";
+import { cannotChange, creatorOf, deleteExpense, getExpenseChanges, type ExpenseWithShares } from "./api";
 import { ChangeText } from "./ChangeText";
 import { demoChanges } from "./demo";
 
@@ -105,7 +105,7 @@ export function ExpenseDetailSheet({
         </Section>
       )}
 
-      <p className="text-center text-xs text-muted">Added by {memberName(expense.created_by)}</p>
+      <p className="text-center text-xs text-muted">Added by {memberName(creatorOf(expense))}</p>
 
       {error && <p className="text-sm text-negative">{error}</p>}
       {blocked ? (

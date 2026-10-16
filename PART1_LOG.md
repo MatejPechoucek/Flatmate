@@ -182,5 +182,5 @@ IDEA.md lists shadcn as optional. `npx shadcn@latest mcp init --client claude` l
 - All of it is done in the layout and kit (Part 1), so Split and Chores get the desktop layout without any changes to their screens.
 
 ## Settle up works on the demo flat
-- `SettleUpSheet` used to refuse to record payments on `/flat/demo`. Now it calls `recordDemoSettlement`, which `useSettlements` keeps in memory: a module-level log that starts from `demoSettlements`. The hook's `reload` reads that log, so Balances and History update straight away, just as on a real flat.
-- **Why:** Settle up is a key demo moment and the demo flat has no database behind it. Payments live in memory only, so a refresh resets the demo to a clean state. Supabase is never touched.
+- I wrote an in-memory version of demo settle-up. Meanwhile Split (Part 2) merged their own into `main` (`demoStore.ts`), so in the merge I kept theirs.
+- **Why theirs:** it never opens PayPal for the demo flat's made-up handles, which could belong to real people, so no real money gets sent to strangers. It also pushes updates to subscribers, so every screen refreshes immediately. Mine did neither.

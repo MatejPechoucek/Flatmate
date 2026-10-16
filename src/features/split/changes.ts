@@ -1,5 +1,25 @@
 // Pure logic for edit/delete notices — no runtime imports, unit-tested with `node --test`.
 
+interface ExpenseLike {
+  payer_id: string;
+  created_by: string | null;
+  bounty_id: string | null;
+  deleted_at: string | null;
+}
+
+/** Who owns an expense. Rows without created_by (seed data, SQL inserts) belong to the payer. */
+export function creatorOf(e: ExpenseLike): string {
+  return e.created_by ?? e.payer_id;
+}
+
+/** Why `memberId` can't edit/delete this expense, or null if they can. */
+export function cannotChange(e: ExpenseLike, memberId: string): string | null {
+  if (e.deleted_at) return "This expense was deleted.";
+  if (e.bounty_id) return "Chore buyouts can't be changed.";
+  if (creatorOf(e) !== memberId) return "Only the person who added this can change it.";
+  return null;
+}
+
 export interface Snapshot {
   description: string;
   amount_pence: number;

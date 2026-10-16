@@ -3,7 +3,7 @@
 import { supabase } from "@/lib/supabase";
 import type { ExpenseChange, ExpenseSnapshot, SplitType } from "@/lib/types";
 import type { ExpenseWithShares } from "./api";
-import { isNoticeFor } from "./changes";
+import { cannotChange, isNoticeFor } from "./changes";
 import { SplitError } from "./shares";
 
 export function snapshotOf(e: ExpenseWithShares): ExpenseSnapshot {
@@ -15,13 +15,6 @@ export function snapshotOf(e: ExpenseWithShares): ExpenseSnapshot {
   };
 }
 
-/** Why `memberId` can't edit/delete this expense, or null if they can. */
-export function cannotChange(e: ExpenseWithShares, memberId: string): string | null {
-  if (e.deleted_at) return "This expense was deleted.";
-  if (e.bounty_id) return "Chore buyouts can't be changed.";
-  if (e.created_by !== memberId) return "Only the person who added this can change it.";
-  return null;
-}
 
 async function loadExpense(id: string): Promise<ExpenseWithShares> {
   const { data, error } = await supabase.from("expenses").select("*, expense_shares(*)").eq("id", id).single<ExpenseWithShares>();
