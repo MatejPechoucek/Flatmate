@@ -15,7 +15,7 @@ Owner: Split · Folder: `src/features/split/` · Tables: `expenses`, `expense_sh
 | Notices | The expense shows an **"Edited"** badge. A dismissible banner at the top of Split reads e.g. "Alex changed Tesco shop £42.60 → £52.60 (your share £10.65 → £13.15)". |
 | Recurring | Fixed amount, weekly/monthly, with a **start date (default today)**. The first expense is created on the start date. Each generated expense can be edited like any other. |
 | Payments | **PayPal.me links only.** Apple Pay / Google Pay can't send money to a person in the UK, and on the web they only pay merchants. Cash or bank transfer is the fallback. |
-| Buyouts | Created by Chores through `addExpense({ bountyId })`. **These can't be edited or deleted**, because the bounty is the source of truth. |
+| Buyouts | Created by Chores' `accept_bounty` SQL function, which inserts the expense + share atomically (payer = doer, `created_by` = doer, offerer owes the full amount, `bounty_id` set). Split must **not** call `addExpense` for them. **They can't be edited or deleted**, because the bounty is the source of truth. |
 
 ---
 
@@ -50,7 +50,7 @@ Owner: Split · Folder: `src/features/split/` · Tables: `expenses`, `expense_sh
 
 ## 2 · Add expense · ~20 min
 
-`addExpense(input)` **(CONTRACT)**: insert into `expenses` (with `created_by`), then insert `expense_shares` rows. Return the expense.
+`addExpense(input)` **(CONTRACT, general use)**: insert into `expenses` (with `created_by`), then insert `expense_shares` rows. Return the expense.
 
 Wire up `AddExpenseSheet`:
 - Description, amount (`parsePounds`), **payer picker** (default: me), participant toggles (all on).
@@ -126,7 +126,7 @@ The amount is editable (default: the full balance) to allow partial payments.
 |---|---|---|---|
 | 0 | Schema additions + types | 5 min | Must |
 | 1 | `computeShares` | 10 min | Must |
-| 2 | Add expense | 20 min | Must (**Chores is waiting for `addExpense`; build it first and push**) |
+| 2 | Add expense | 20 min | Must |
 | 3 | List + realtime | 10 min | Must |
 | 4 | Simplified balances | 15 min | Must (Home is waiting for `getBalances`) |
 | 5 | Settle up | 10 min | Must (demo step 6) |

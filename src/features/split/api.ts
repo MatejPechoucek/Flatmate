@@ -21,8 +21,8 @@ export interface NewExpense {
 }
 
 /**
- * CONTRACT (used by Chores for buyouts). Inserts the expense + its shares.
- * Buyout example: { payerId: doer, createdBy: doer, shares: { [offerer]: amount }, bountyId }.
+ * CONTRACT (general expense inserts). Inserts the expense + its shares.
+ * Not for buyouts: Chores' accept_bounty SQL function writes those atomically.
  */
 export async function addExpense(input: NewExpense): Promise<Expense> {
   return insertExpense(input);

@@ -1,23 +1,36 @@
-// Chores feature — data access, fairness, auto-assign and buyouts.
-// Owns tables: chores, chore_tasks, weight_objections, weight_votes, bounties.
-//
-// Functions marked CONTRACT are used by other parts — keep their signatures stable.
+// Part 3 owns this API. Keep the Home and FlatProvider CONTRACT signatures stable.
+import { supabase } from "@/lib/supabase";
+import { getMemberId } from "@/lib/identity";
 import type { Bounty, Chore, ChoreTask } from "@/lib/types";
+import type { ChoreBoard, MutationResult } from "./types";
 
-/** Rolling 28-day fairness points per member (completed tasks credited to them). */
+function memberId(flatId: string): string {
+  const id = getMemberId(flatId);
+  if (!id) throw new Error("Join this flat before changing chores.");
+  return id;
+}
+
+async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw new Error(error.message);
+  return data as T;
+}
+
+export function getChoreBoard(flatId: string, currentMemberId = memberId(flatId)): Promise<ChoreBoard> {
+  return rpc("get_chore_board", { p_flat_id: flatId, p_member_id: currentMemberId });
+}
+
+/** Rolling completed task snapshots, credited to the contributor over the last 28 days. */
 export async function getFairness(flatId: string): Promise<{ member_id: string; points: number }[]> {
-  void flatId;
-  throw new Error("TODO(chores): getFairness");
+  const board = await getChoreBoard(flatId);
+  return board.members.map(m => ({ member_id: m.id, points: m.fairness_score }));
 }
 
-/** Lowest fairness score wins; ties → whoever did this chore least recently, then random. */
-export async function pickAssignee(flatId: string, choreId: string): Promise<string> {
-  void flatId;
-  void choreId;
-  throw new Error("TODO(chores): pickAssignee");
+/** Preview only. Creation chooses and assigns again inside its database transaction. */
+export function pickAssignee(flatId: string, choreId: string): Promise<string> {
+  return rpc("get_chore_assignee", { p_flat_id: flatId, p_member_id: memberId(flatId), p_chore_id: choreId });
 }
 
-/** Create a chore and its first task (auto-assigned). */
 export async function createChore(input: {
   flatId: string;
   createdBy: string;
@@ -26,61 +39,52 @@ export async function createChore(input: {
   kind: Chore["kind"];
   intervalDays?: number;
   firstDueAt?: string;
-}): Promise<Chore> {
-  void input;
-  throw new Error("TODO(chores): createChore");
+}): Promise<Chore & { mutation: MutationResult }> {
+  const result = await rpc<MutationResult & { chore: Chore }>("create_chore", {
+    p_flat_id: input.flatId, p_member_id: input.createdBy, p_title: input.title,
+    p_weight: input.weight, p_kind: input.kind, p_interval_days: input.intervalDays ?? null,
+    p_due_at: input.firstDueAt ?? null,
+  });
+  return { ...result.chore, mutation: result };
 }
 
-/** Mark done; points go to the bounty offerer if the task was bought out, else to the doer. */
-export async function completeTask(taskId: string, memberId: string): Promise<void> {
-  void taskId;
-  void memberId;
-  throw new Error("TODO(chores): completeTask");
+export function completeTask(taskId: string, currentMemberId: string): Promise<MutationResult> {
+  return rpc("complete_chore_task", { p_task_id: taskId, p_member_id: currentMemberId });
 }
 
-/** CONTRACT (used by Home). Open tasks, optionally only those assigned to one member. */
+/** CONTRACT (Home): open tasks, optionally restricted to the current assignee. */
 export async function getOpenTasks(flatId: string, assignedTo?: string): Promise<(ChoreTask & { chore: Chore })[]> {
-  void flatId;
-  void assignedTo;
-  throw new Error("TODO(chores): getOpenTasks");
+  const board = await getChoreBoard(flatId);
+  return board.tasks.filter(t => t.status === "open" && (!assignedTo || t.assigned_to === assignedTo))
+    .map(t => ({ ...t, chore: board.chores.find(c => c.id === t.chore_id)! }));
 }
 
-/** CONTRACT (used by Home). Open bounties with their task + chore. */
+/** CONTRACT (Home): open offers with their task and chore. */
 export async function getOpenBounties(flatId: string): Promise<(Bounty & { task: ChoreTask; chore: Chore })[]> {
-  void flatId;
-  throw new Error("TODO(chores): getOpenBounties");
+  const board = await getChoreBoard(flatId);
+  return board.bounties.filter(b => b.status === "open").map(b => {
+    const task = board.tasks.find(t => t.id === b.task_id)!;
+    return { ...b, task, chore: board.chores.find(c => c.id === task.chore_id)! };
+  });
 }
 
-/** Price = chore.weight × flat.buyout_rate_pence (or higher if raised). */
-export async function offerBounty(taskId: string, offeredBy: string, amountPence?: number): Promise<Bounty> {
-  void taskId;
-  void offeredBy;
-  void amountPence;
-  throw new Error("TODO(chores): offerBounty");
+/** Price comes only from the database's weight/rate snapshot; raising is deferred. */
+export async function offerBounty(taskId: string, offeredBy: string, amountPence?: number): Promise<Bounty & { mutation: MutationResult }> {
+  if (amountPence !== undefined) throw new Error("Bounty prices are fixed by the flat rate.");
+  const result = await rpc<MutationResult & { bounty: Bounty }>("offer_bounty", { p_task_id: taskId, p_member_id: offeredBy });
+  return { ...result.bounty, mutation: result };
 }
 
-/**
- * First to accept wins (update ... where status = 'open'). Reassigns the task to the accepter
- * and calls split's addExpense({ payerId: accepter, createdBy: accepter, shares: { [offerer]: amount }, bountyId }).
- */
-export async function acceptBounty(bountyId: string, memberId: string): Promise<void> {
-  void bountyId;
-  void memberId;
-  throw new Error("TODO(chores): acceptBounty");
+/** Acceptance, reassignment, expense and share commit together. Do NOT call addExpense again. */
+export function acceptBounty(bountyId: string, currentMemberId: string): Promise<MutationResult> {
+  return rpc("accept_bounty", { p_bounty_id: bountyId, p_member_id: currentMemberId });
 }
 
-export async function objectToWeight(choreId: string, memberId: string, proposedWeight: number): Promise<void> {
-  void choreId;
-  void memberId;
-  void proposedWeight;
-  throw new Error("TODO(chores): objectToWeight");
+export function cancelBounty(bountyId: string, currentMemberId: string): Promise<MutationResult> {
+  return rpc("cancel_bounty", { p_bounty_id: bountyId, p_member_id: currentMemberId });
 }
 
-/**
- * CONTRACT (called by FlatProvider on open). Create a task for every recurring chore whose
- * next_due_at <= now, auto-assign it, then advance next_due_at. UNIQUE (chore_id, due_at)
- * makes concurrent calls safe.
- */
+/** CONTRACT (FlatProvider): only scheduled occurrences due now, safe to repeat. */
 export async function catchUpChores(flatId: string): Promise<void> {
-  void flatId; // TODO(chores)
+  await rpc("catch_up_chores", { p_flat_id: flatId, p_member_id: memberId(flatId) });
 }

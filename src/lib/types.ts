@@ -127,6 +127,7 @@ export interface ChoreTask {
   flat_id: string;
   assigned_to: string | null;
   due_at: string | null;
+  weight_snapshot: number; // weight at creation time, so history stays accurate
   status: "open" | "done";
   completed_by: string | null;
   completed_at: string | null;
