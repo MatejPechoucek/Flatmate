@@ -9,14 +9,18 @@ import { dismissNotice, getMyNotices } from "./api";
 import { isNoticeFor } from "./changes";
 import { demoDismissNotice, getDemoChanges, getDemoDismissed, subscribeDemo } from "./demoStore";
 
+const empty: never[] = [];
+const noChanges = () => empty as ExpenseChange[];
+const noDismissed = () => empty as string[];
+
 /** Edits/deletes by others that affect me and that I haven't dismissed. Live. */
 export function useNotices() {
   const { flat, me } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
   const [notices, setNotices] = useState<ExpenseChange[]>([]);
   // Demo flat: notices come from the in-memory change log, newest first, minus dismissed ones.
-  const demoChanges = useSyncExternalStore(subscribeDemo, getDemoChanges, getDemoChanges);
-  const demoDismissed = useSyncExternalStore(subscribeDemo, getDemoDismissed, getDemoDismissed);
+  const demoChanges = useSyncExternalStore(subscribeDemo, getDemoChanges, noChanges); // browser only
+  const demoDismissed = useSyncExternalStore(subscribeDemo, getDemoDismissed, noDismissed);
   const demoNotices = useMemo(
     () => demoChanges.filter((c) => isNoticeFor(c, me.id) && !demoDismissed.includes(c.id)).reverse(),
     [demoChanges, demoDismissed, me.id],

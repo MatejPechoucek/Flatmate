@@ -14,7 +14,7 @@ export function useSettlements() {
   const isDemo = flat.id === DEMO_FLAT_ID;
   const [settlements, setSettlements] = useState<Settlement[] | null>(null);
   // Demo flat: payments live in memory (see demoStore) instead of the database.
-  const demoSettlements = useSyncExternalStore(subscribeDemo, getDemoSettlements, getDemoSettlements);
+  const demoSettlements = useSyncExternalStore(subscribeDemo, getDemoSettlements, () => null); // server: render loading, not demo data
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {

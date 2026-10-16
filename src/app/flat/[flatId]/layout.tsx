@@ -24,7 +24,8 @@ export default function FlatLayout({ children }: { children: ReactNode }) {
         <Sidebar base={`/flat/${flatId}`} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Header />
-          <main key={pathname} className="animate-rise-in mx-auto w-full flex-1 px-4 pb-36 pt-2 lg:max-w-3xl lg:px-10 lg:pb-28">
+          {/* Fade only: a transform here would trap the fixed Sheet/Fab inside <main> (below the tab bar). */}
+          <main key={pathname} className="animate-fade-in mx-auto w-full flex-1 px-4 pb-36 pt-2 lg:max-w-3xl lg:px-10 lg:pb-28">
             {children}
           </main>
         </div>

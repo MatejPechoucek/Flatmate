@@ -40,13 +40,6 @@ export const demoExpenses: (Expense & { your_share_pence: number })[] = [
   { id: "e4", flat_id: DEMO_FLAT_ID, payer_id: "m-tom", description: "Buyout: Bathroom deep clean", amount_pence: 500, split_type: "amount", recurring_expense_id: null, bounty_id: "b0", due_at: null, created_by: "m-tom", edited_at: null, deleted_at: null, created_at: daysAgo(6), your_share_pence: 500 },
 ];
 
-/** Net balance per member, from the viewer's (Alex's) perspective: + means they owe you. */
-export const demoBalances: { member_id: string; pence: number }[] = [
-  { member_id: "m-sam", pence: 265 },
-  { member_id: "m-priya", pence: -345 },
-  { member_id: "m-tom", pence: 1065 },
-];
-
 export const demoChores: Chore[] = [
   { id: "c1", flat_id: DEMO_FLAT_ID, title: "Take the bins out", weight: 1, created_by: "m-alex", kind: "recurring", interval_days: 7, next_due_at: inDays(1), weight_proposed_at: daysAgo(30), active: true, created_at: daysAgo(30) },
   { id: "c2", flat_id: DEMO_FLAT_ID, title: "Bathroom deep clean", weight: 5, created_by: "m-sam", kind: "recurring", interval_days: 14, next_due_at: inDays(3), weight_proposed_at: daysAgo(30), active: true, created_at: daysAgo(30) },
@@ -76,21 +69,6 @@ export const demoTasks: ChoreTask[] = [
   task("t5", "c1", "m-tom", -6, true),
 ];
 
-/** Rolling 28-day fairness points. */
-export const demoFairness: { member_id: string; points: number }[] = [
-  { member_id: "m-alex", points: 6 },
-  { member_id: "m-sam", points: 9 },
-  { member_id: "m-priya", points: 7 },
-  { member_id: "m-tom", points: 4 },
-];
-
 export const demoBounties: Bounty[] = [
-  { id: "b1", flat_id: DEMO_FLAT_ID, task_id: "t3", offered_by: "m-priya", amount_pence: 300, status: "open", accepted_by: null, created_at: daysAgo(0) },
-];
-
-export const demoActivity: { id: string; member_id: string; text: string; at: string }[] = [
-  { id: "a1", member_id: "m-alex", text: "added Tesco big shop · £42.60", at: daysAgo(0) },
-  { id: "a2", member_id: "m-priya", text: "offered a £3 bounty for Hoover the lounge", at: daysAgo(0) },
-  { id: "a3", member_id: "m-tom", text: "took the bins out", at: daysAgo(6) },
-  { id: "a4", member_id: "m-tom", text: "bought out Bathroom deep clean from Sam", at: daysAgo(6) },
+  { id: "b1", flat_id: DEMO_FLAT_ID, task_id: "t3", offered_by: "m-priya", amount_pence: 200, status: "open", accepted_by: null, created_at: daysAgo(0) },
 ];

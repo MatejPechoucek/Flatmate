@@ -13,7 +13,7 @@ export function useRecurring() {
   const { flat } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
   const [rules, setRules] = useState<RecurringExpense[] | null>(null);
-  const demoRules = useSyncExternalStore(subscribeDemo, getDemoRules, getDemoRules); // demo flat: in-memory
+  const demoRules = useSyncExternalStore(subscribeDemo, getDemoRules, () => null); // demo flat: in-memory, browser only
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {

@@ -13,9 +13,10 @@ export function useExpenses() {
   const isDemo = flat.id === DEMO_FLAT_ID;
   const [expenses, setExpenses] = useState<ExpenseWithShares[] | null>(null);
   // Demo flat: in-memory store (see demoStore), newest first, deleted ones hidden like the real query.
-  const allDemo = useSyncExternalStore(subscribeDemo, getDemoExpenses, getDemoExpenses);
+  // Server snapshot is empty: demo data is rendered in the browser only, so dates never mismatch on hydration.
+  const allDemo = useSyncExternalStore(subscribeDemo, getDemoExpenses, () => null);
   const demoExpenses = useMemo(
-    () => allDemo.filter((e) => !e.deleted_at).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    () => allDemo && allDemo.filter((e) => !e.deleted_at).sort((a, b) => b.created_at.localeCompare(a.created_at)),
     [allDemo],
   );
   const [error, setError] = useState<string | null>(null);
