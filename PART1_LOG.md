@@ -9,7 +9,7 @@ Status: `npx tsc --noEmit` ✅ · `npm run lint` ✅ · `npm run build` ✅ (bui
 
 | # | Task | Status |
 |---|---|---|
-| 1 | Supabase project, run `schema.sql`, share `.env.local`, deploy to Vercel | ⏳ **You need to do this** (needs your accounts), see [Setup steps](#setup-steps-task-1) |
+| 1 | Supabase project, run `schema.sql`, share `.env.local`, deploy to Vercel | 🟡 Supabase ✅ (schema + seed run, `.env.local` set, read/write verified 16 Oct) · share env with team ⏳ · Vercel ⏳ |
 | 2 | `createFlat`, `findFlatByCode`, `joinFlat` → Landing + Join | ✅ |
 | 3 | Settings: invite link + QR, buyout rate editor | ✅ |
 | 4 | Home: real `getBalances` / `getOpenTasks` / `getOpenBounties` | ✅ wired, with automatic fallback until Split/Chores implement them |
@@ -26,6 +26,7 @@ Status: `npx tsc --noEmit` ✅ · `npm run lint` ✅ · `npm run build` ✅ (bui
    - Project Settings → API → copy the **Project URL** and **anon/publishable key**.
 2. **Env:** `cp .env.example .env.local` and fill in both values. Send them to the team privately (never commit `.env.local`; `.gitignore` already blocks `.env*`).
 3. **Run:** `npm install && npm run dev` → http://localhost:3000.
+   - Notes from doing it: Supabase warns *"creates tables without enabling RLS"* on `schema.sql`. That's a false alarm, because the loop at the end enables RLS. Click **Run without RLS**. Use the URL **without** `/rest/v1/`. Keys are at Project Settings → API Keys (Publishable `sb_publishable_…`, or Legacy → `anon`). Watch for a stray space after `=` in `.env.local`.
 4. **Vercel:** import the GitHub repo at vercel.com/new, add the same two env vars, deploy. The QR code uses `window.location.origin`, so it automatically points to the Vercel URL once you open the app there. **Show the QR from the deployed site, not localhost**, otherwise judges' phones can't open it.
 
 ---
