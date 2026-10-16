@@ -48,6 +48,9 @@ create table expenses (
   recurring_expense_id uuid references recurring_expenses(id) on delete set null,
   bounty_id            uuid,  -- set when the expense was created by a chore buyout
   due_at               timestamptz,
+  created_by           uuid references members(id) on delete set null, -- only the creator may edit/delete
+  edited_at            timestamptz,
+  deleted_at           timestamptz,  -- soft delete: excluded from lists and balances
   created_at           timestamptz not null default now(),
   unique (recurring_expense_id, due_at)
 );
@@ -58,6 +61,24 @@ create table expense_shares (
   member_id    uuid not null references members(id) on delete cascade,
   amount_pence int  not null check (amount_pence >= 0),
   primary key (expense_id, member_id)
+);
+
+-- Audit log of edits/deletes; powers the "Alex changed X" notices.
+create table expense_changes (
+  id         uuid primary key default gen_random_uuid(),
+  flat_id    uuid not null references flats(id) on delete cascade,
+  expense_id uuid not null references expenses(id) on delete cascade,
+  changed_by uuid not null references members(id) on delete cascade,
+  kind       text not null check (kind in ('edit', 'delete')),
+  before     jsonb not null,  -- ExpenseSnapshot
+  after      jsonb,           -- ExpenseSnapshot, null for delete
+  created_at timestamptz not null default now()
+);
+
+create table expense_change_dismissals (
+  change_id uuid not null references expense_changes(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  primary key (change_id, member_id)
 );
 
 create table settlements (
@@ -134,6 +155,7 @@ alter table expenses
 create index on members (flat_id);
 create index on expenses (flat_id);
 create index on settlements (flat_id);
+create index on expense_changes (flat_id);
 create index on recurring_expenses (flat_id);
 create index on chores (flat_id);
 create index on chore_tasks (flat_id);
@@ -146,6 +168,7 @@ declare t text;
 begin
   foreach t in array array[
     'flats', 'members', 'recurring_expenses', 'expenses', 'expense_shares', 'settlements',
+    'expense_changes', 'expense_change_dismissals',
     'chores', 'weight_objections', 'weight_votes', 'chore_tasks', 'bounties'
   ] loop
     execute format('alter table %I enable row level security', t);

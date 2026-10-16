@@ -61,7 +61,7 @@ export async function offerBounty(taskId: string, offeredBy: string, amountPence
 
 /**
  * First to accept wins (update ... where status = 'open'). Reassigns the task to the accepter
- * and calls split's addExpense({ payerId: accepter, shares: { [offerer]: amount }, bountyId }).
+ * and calls split's addExpense({ payerId: accepter, createdBy: accepter, shares: { [offerer]: amount }, bountyId }).
  */
 export async function acceptBounty(bountyId: string, memberId: string): Promise<void> {
   void bountyId;

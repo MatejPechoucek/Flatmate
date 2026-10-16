@@ -7,6 +7,8 @@ import type { Expense, SplitType } from "@/lib/types";
 export interface NewExpense {
   flatId: string;
   payerId: string;
+  /** Who added it; only they can edit/delete it later. */
+  createdBy: string;
   description: string;
   amountPence: number;
   splitType: SplitType;
@@ -17,7 +19,7 @@ export interface NewExpense {
 
 /**
  * CONTRACT (used by Chores for buyouts). Inserts the expense + its shares.
- * Buyout example: { payerId: doer, shares: { [offerer]: amount }, bountyId }.
+ * Buyout example: { payerId: doer, createdBy: doer, shares: { [offerer]: amount }, bountyId }.
  */
 export async function addExpense(input: NewExpense): Promise<Expense> {
   void input;
