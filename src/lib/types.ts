@@ -31,6 +31,9 @@ export interface Expense {
   recurring_expense_id: string | null;
   bounty_id: string | null;
   due_at: string | null;
+  created_by: string | null;
+  edited_at: string | null;
+  deleted_at: string | null;
   created_at: string;
 }
 
@@ -38,6 +41,30 @@ export interface ExpenseShare {
   expense_id: string;
   member_id: string;
   amount_pence: number;
+}
+
+/** State of an expense captured before/after an edit. */
+export interface ExpenseSnapshot {
+  description: string;
+  amount_pence: number;
+  payer_id: string;
+  shares: Record<string, number>; // member_id → pence
+}
+
+export interface ExpenseChange {
+  id: string;
+  flat_id: string;
+  expense_id: string;
+  changed_by: string;
+  kind: "edit" | "delete";
+  before: ExpenseSnapshot;
+  after: ExpenseSnapshot | null;
+  created_at: string;
+}
+
+export interface ExpenseChangeDismissal {
+  change_id: string;
+  member_id: string;
 }
 
 export interface RecurringExpense {
@@ -100,6 +127,7 @@ export interface ChoreTask {
   flat_id: string;
   assigned_to: string | null;
   due_at: string | null;
+  weight_snapshot: number; // weight at creation time, so history stays accurate
   status: "open" | "done";
   completed_by: string | null;
   completed_at: string | null;

@@ -81,7 +81,7 @@ export function LandingScreen() {
             <Input label="Flat name" placeholder="14 Gower Street" value={flatName} onChange={(e) => setFlatName(e.target.value)} required />
             <Input label="Your name" placeholder="Alex" value={name} onChange={(e) => setName(e.target.value)} required />
             <Input
-              label="Monzo.me username (optional)"
+              label="PayPal.me username (optional)"
               placeholder="so flatmates can pay you back"
               value={payHandle}
               onChange={(e) => setPayHandle(e.target.value)}

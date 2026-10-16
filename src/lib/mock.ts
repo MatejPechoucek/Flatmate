@@ -25,19 +25,19 @@ const member = (id: string, name: string, pay_handle: string | null = null): Mem
 });
 
 export const demoMembers: Member[] = [
-  member("m-alex", "Alex", "alexmonzo"),
+  member("m-alex", "Alex", "alexj"),
   member("m-sam", "Sam", "samj"),
-  member("m-priya", "Priya", "paypal:priyak"),
+  member("m-priya", "Priya", "priyak"),
   member("m-tom", "Tom"),
 ];
 
 export const DEMO_ME_ID = "m-alex";
 
 export const demoExpenses: (Expense & { your_share_pence: number })[] = [
-  { id: "e1", flat_id: DEMO_FLAT_ID, payer_id: "m-alex", description: "Tesco big shop", amount_pence: 4260, split_type: "equal", recurring_expense_id: null, bounty_id: null, due_at: null, created_at: daysAgo(0), your_share_pence: 1065 },
-  { id: "e2", flat_id: DEMO_FLAT_ID, payer_id: "m-sam", description: "Wi-Fi · October", amount_pence: 3200, split_type: "equal", recurring_expense_id: "r1", bounty_id: null, due_at: daysAgo(2), created_at: daysAgo(2), your_share_pence: 800 },
-  { id: "e3", flat_id: DEMO_FLAT_ID, payer_id: "m-priya", description: "Cleaning supplies", amount_pence: 1150, split_type: "percent", recurring_expense_id: null, bounty_id: null, due_at: null, created_at: daysAgo(5), your_share_pence: 345 },
-  { id: "e4", flat_id: DEMO_FLAT_ID, payer_id: "m-tom", description: "Buyout: Bathroom deep clean", amount_pence: 500, split_type: "amount", recurring_expense_id: null, bounty_id: "b0", due_at: null, created_at: daysAgo(6), your_share_pence: 500 },
+  { id: "e1", flat_id: DEMO_FLAT_ID, payer_id: "m-alex", description: "Tesco big shop", amount_pence: 4260, split_type: "equal", recurring_expense_id: null, bounty_id: null, due_at: null, created_by: "m-alex", edited_at: null, deleted_at: null, created_at: daysAgo(0), your_share_pence: 1065 },
+  { id: "e2", flat_id: DEMO_FLAT_ID, payer_id: "m-sam", description: "Wi-Fi · October", amount_pence: 3200, split_type: "equal", recurring_expense_id: "r1", bounty_id: null, due_at: daysAgo(2), created_by: "m-sam", edited_at: null, deleted_at: null, created_at: daysAgo(2), your_share_pence: 800 },
+  { id: "e3", flat_id: DEMO_FLAT_ID, payer_id: "m-priya", description: "Cleaning supplies", amount_pence: 1150, split_type: "percent", recurring_expense_id: null, bounty_id: null, due_at: null, created_by: "m-priya", edited_at: daysAgo(4), deleted_at: null, created_at: daysAgo(5), your_share_pence: 345 },
+  { id: "e4", flat_id: DEMO_FLAT_ID, payer_id: "m-tom", description: "Buyout: Bathroom deep clean", amount_pence: 500, split_type: "amount", recurring_expense_id: null, bounty_id: "b0", due_at: null, created_by: "m-tom", edited_at: null, deleted_at: null, created_at: daysAgo(6), your_share_pence: 500 },
 ];
 
 /** Net balance per member, from the viewer's (Alex's) perspective: + means they owe you. */
@@ -60,6 +60,7 @@ const task = (id: string, chore_id: string, assigned_to: string, due: number, do
   flat_id: DEMO_FLAT_ID,
   assigned_to,
   due_at: due >= 0 ? inDays(due) : daysAgo(-due),
+  weight_snapshot: demoChores.find((c) => c.id === chore_id)!.weight,
   status: done ? "done" : "open",
   completed_by: done ? assigned_to : null,
   completed_at: done ? daysAgo(-due) : null,
