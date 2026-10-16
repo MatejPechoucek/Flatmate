@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f5f2" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f3ef" },
     { media: "(prefers-color-scheme: dark)", color: "#111110" },
   ],
 };
@@ -31,9 +31,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full">
-        {/* Mobile-first: content never wider than a phone, centred on desktop. */}
+        {/* Mobile-first: phone-width column; from lg up each page lays itself out for desktop. */}
         {/* Suspense: pages are client-rendered and read route params via hooks (required by cacheComponents). */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
+        <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col lg:max-w-none">
           <Suspense>{children}</Suspense>
         </div>
       </body>
