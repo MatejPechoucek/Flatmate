@@ -33,7 +33,7 @@ export function Button({
 /** Floating "add" button, bottom-right above the tab bar. One per screen. */
 export function Fab({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-20 mx-auto flex max-w-md justify-end px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-20 mx-auto flex max-w-md justify-end px-4 lg:bottom-8 lg:left-60 lg:max-w-3xl lg:px-10">
       <button
         onClick={onClick}
         className="pointer-events-auto inline-flex h-14 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-fg shadow-lg shadow-black/15 transition duration-150 active:scale-95"
@@ -171,10 +171,11 @@ export function Sheet({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center">
+    // Phone: bottom sheet. sm and up: centred dialog.
+    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-6">
       <div className="animate-fade-in absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="animate-sheet-up relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-background p-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border" />
+      <div className="animate-sheet-up sm:animate-pop-in relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-background p-5 pb-[max(2rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-3xl sm:p-6 sm:shadow-2xl">
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border sm:hidden" />
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted transition active:scale-95" aria-label="Close">

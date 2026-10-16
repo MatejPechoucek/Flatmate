@@ -104,75 +104,80 @@ export function HomeScreen() {
         </span>
       </Link>
 
-      <Section
-        title="Your next chores"
-        action={
-          <Link href={`/flat/${flat.id}/chores`} className="text-sm font-medium text-accent">
-            All chores
-          </Link>
-        }
-      >
-        {myTasks.length === 0 ? (
-          <EmptyState>Nothing on your list. Enjoy it.</EmptyState>
-        ) : (
-          <List>
-            {myTasks.map((t) => {
-              const due = dueLabel(t.due_at);
-              return (
-                <ListRow
-                  key={t.id}
-                  title={t.chore.title}
-                  subtitle={<WeightDots weight={t.chore.weight} />}
-                  trailing={<Badge tone={due.overdue ? "negative" : "neutral"}>{due.text}</Badge>}
-                />
-              );
-            })}
-          </List>
-        )}
-      </Section>
+      {/* Desktop: chores + bounties on the left, activity on the right. */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-6">
+          <Section
+            title="Your next chores"
+            action={
+              <Link href={`/flat/${flat.id}/chores`} className="text-sm font-medium text-accent">
+                All chores
+              </Link>
+            }
+          >
+            {myTasks.length === 0 ? (
+              <EmptyState>Nothing on your list. Enjoy it.</EmptyState>
+            ) : (
+              <List>
+                {myTasks.map((t) => {
+                  const due = dueLabel(t.due_at);
+                  return (
+                    <ListRow
+                      key={t.id}
+                      title={t.chore.title}
+                      subtitle={<WeightDots weight={t.chore.weight} />}
+                      trailing={<Badge tone={due.overdue ? "negative" : "neutral"}>{due.text}</Badge>}
+                    />
+                  );
+                })}
+              </List>
+            )}
+          </Section>
 
-      {bounties.length > 0 && (
-        <Section title="Up for grabs">
-          <List>
-            {bounties.map((b) => (
-              <Link key={b.id} href={`/flat/${flat.id}/chores`} className="block">
+          {bounties.length > 0 && (
+            <Section title="Up for grabs">
+              <List>
+                {bounties.map((b) => (
+                  <Link key={b.id} href={`/flat/${flat.id}/chores`} className="block">
+                    <ListRow
+                      leading={
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-warning-soft text-warning">
+                          <Coins size={18} />
+                        </span>
+                      }
+                      title={b.chore.title}
+                      subtitle={`${memberName(b.offered_by)} will pay`}
+                      trailing={<Amount pence={b.amount_pence} className="text-warning" />}
+                    />
+                  </Link>
+                ))}
+              </List>
+            </Section>
+          )}
+        </div>
+
+        <Section title="Activity">
+          {activity.length === 0 ? (
+            <EmptyState icon={<Receipt size={20} />}>Add an expense or finish a chore and it&apos;ll show up here.</EmptyState>
+          ) : (
+            <List>
+              {activity.map((a) => (
                 <ListRow
-                  leading={
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-warning-soft text-warning">
-                      <Coins size={18} />
+                  key={a.id}
+                  leading={<Avatar name={realName(a.member_id)} />}
+                  title={
+                    <span className="font-normal">
+                      <span className="font-medium">{memberName(a.member_id)}</span> {a.text}
                     </span>
                   }
-                  title={b.chore.title}
-                  subtitle={`${memberName(b.offered_by)} will pay`}
-                  trailing={<Amount pence={b.amount_pence} className="text-warning" />}
+                  subtitle={timeAgo(a.at)}
+                  trailing={a.icon === "chore" && <CheckCircle2 size={18} className="text-positive" />}
                 />
-              </Link>
-            ))}
-          </List>
+              ))}
+            </List>
+          )}
         </Section>
-      )}
-
-      <Section title="Activity">
-        {activity.length === 0 ? (
-          <EmptyState icon={<Receipt size={20} />}>Add an expense or finish a chore and it&apos;ll show up here.</EmptyState>
-        ) : (
-          <List>
-            {activity.map((a) => (
-              <ListRow
-                key={a.id}
-                leading={<Avatar name={realName(a.member_id)} />}
-                title={
-                  <span className="font-normal">
-                    <span className="font-medium">{memberName(a.member_id)}</span> {a.text}
-                  </span>
-                }
-                subtitle={timeAgo(a.at)}
-                trailing={a.icon === "chore" && <CheckCircle2 size={18} className="text-positive" />}
-              />
-            ))}
-          </List>
-        )}
-      </Section>
+      </div>
     </div>
   );
 }
@@ -182,13 +187,15 @@ function HomeSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading">
       <Skeleton className="h-32 rounded-3xl" />
-      <div className="flex flex-col gap-2.5">
-        <Skeleton className="ml-1 h-3 w-28" />
-        <Skeleton className="h-36 rounded-3xl" />
-      </div>
-      <div className="flex flex-col gap-2.5">
-        <Skeleton className="ml-1 h-3 w-20" />
-        <Skeleton className="h-52 rounded-3xl" />
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-2.5">
+          <Skeleton className="ml-1 h-3 w-28" />
+          <Skeleton className="h-36 rounded-3xl" />
+        </div>
+        <div className="flex flex-col gap-2.5">
+          <Skeleton className="ml-1 h-3 w-20" />
+          <Skeleton className="h-52 rounded-3xl" />
+        </div>
       </div>
     </div>
   );

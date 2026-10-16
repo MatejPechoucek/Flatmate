@@ -40,80 +40,85 @@ export function LandingScreen() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-5 pb-10 pt-16">
-      <div className="mb-10">
-        <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-fg">
-          <Home size={28} />
+    // Phone: one column. Desktop (lg): pitch on the left, form card on the right.
+    <main className="flex flex-1 flex-col px-5 pb-10 pt-16 lg:mx-auto lg:grid lg:w-full lg:max-w-5xl lg:grid-cols-2 lg:content-center lg:items-center lg:gap-16 lg:px-10 lg:py-16">
+      <div>
+        <div className="mb-10">
+          <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-fg">
+            <Home size={28} />
+          </div>
+          <h1 className="text-4xl font-bold leading-tight tracking-tight lg:text-5xl">
+            Flat life,
+            <br />
+            minus the awkward.
+          </h1>
+          <p className="mt-3 text-lg text-muted">Split bills and share chores fairly. The app does the chasing, so you don&apos;t have to.</p>
         </div>
-        <h1 className="text-4xl font-bold leading-tight tracking-tight">
-          Flat life,
-          <br />
-          minus the awkward.
-        </h1>
-        <p className="mt-3 text-lg text-muted">Split bills and share chores fairly. The app does the chasing, so you don&apos;t have to.</p>
+
+        <div className="mb-8 grid grid-cols-2 gap-3 lg:mb-0">
+          <Card className="flex flex-col gap-2">
+            <Receipt className="text-accent" size={22} />
+            <span className="text-sm font-medium">Split anything, equally or your way</span>
+          </Card>
+          <Card className="flex flex-col gap-2">
+            <Sparkles className="text-accent" size={22} />
+            <span className="text-sm font-medium">Chores assigned fairly, automatically</span>
+          </Card>
+        </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <Card className="flex flex-col gap-2">
-          <Receipt className="text-accent" size={22} />
-          <span className="text-sm font-medium">Split anything, equally or your way</span>
-        </Card>
-        <Card className="flex flex-col gap-2">
-          <Sparkles className="text-accent" size={22} />
-          <span className="text-sm font-medium">Chores assigned fairly, automatically</span>
-        </Card>
-      </div>
+      <div className="flex flex-1 flex-col lg:max-w-md">
+        <div className="flex flex-col gap-4">
+          <SegmentedControl
+            options={[
+              { value: "create", label: "Create a flat" },
+              { value: "join", label: "Join a flat" },
+            ]}
+            value={mode}
+            onChange={(m) => {
+              setMode(m);
+              setError(null);
+            }}
+          />
+          {mode === "create" ? (
+            <form onSubmit={onCreate} className="flex flex-col gap-4">
+              <Input label="Flat name" placeholder="14 Gower Street" value={flatName} onChange={(e) => setFlatName(e.target.value)} required />
+              <Input label="Your name" placeholder="Alex" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input
+                label="PayPal.me username (optional)"
+                placeholder="so flatmates can pay you back"
+                value={payHandle}
+                onChange={(e) => setPayHandle(e.target.value)}
+                autoCapitalize="none"
+              />
+              {error && <p className="text-sm text-negative">{error}</p>}
+              <Button type="submit" disabled={busy || !flatName.trim() || !name.trim()}>
+                {busy ? "Creating…" : "Create flat"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={onJoin} className="flex flex-col gap-4">
+              <Input
+                label="Invite code"
+                placeholder="K7PX2Q"
+                className="font-mono uppercase tracking-widest"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                maxLength={6}
+                autoCapitalize="characters"
+                autoComplete="off"
+              />
+              <Button type="submit" disabled={code.trim().length < 6}>
+                Continue
+              </Button>
+            </form>
+          )}
+        </div>
 
-      <div className="flex flex-col gap-4">
-        <SegmentedControl
-          options={[
-            { value: "create", label: "Create a flat" },
-            { value: "join", label: "Join a flat" },
-          ]}
-          value={mode}
-          onChange={(m) => {
-            setMode(m);
-            setError(null);
-          }}
-        />
-        {mode === "create" ? (
-          <form onSubmit={onCreate} className="flex flex-col gap-4">
-            <Input label="Flat name" placeholder="14 Gower Street" value={flatName} onChange={(e) => setFlatName(e.target.value)} required />
-            <Input label="Your name" placeholder="Alex" value={name} onChange={(e) => setName(e.target.value)} required />
-            <Input
-              label="PayPal.me username (optional)"
-              placeholder="so flatmates can pay you back"
-              value={payHandle}
-              onChange={(e) => setPayHandle(e.target.value)}
-              autoCapitalize="none"
-            />
-            {error && <p className="text-sm text-negative">{error}</p>}
-            <Button type="submit" disabled={busy || !flatName.trim() || !name.trim()}>
-              {busy ? "Creating…" : "Create flat"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={onJoin} className="flex flex-col gap-4">
-            <Input
-              label="Invite code"
-              placeholder="K7PX2Q"
-              className="font-mono uppercase tracking-widest"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoComplete="off"
-            />
-            <Button type="submit" disabled={code.trim().length < 6}>
-              Continue
-            </Button>
-          </form>
-        )}
+        <button onClick={enterDemo} className="mt-auto pt-10 text-sm font-medium text-accent">
+          Peek at a demo flat →
+        </button>
       </div>
-
-      <button onClick={enterDemo} className="mt-auto pt-10 text-sm font-medium text-accent">
-        Peek at a demo flat →
-      </button>
     </main>
   );
 }

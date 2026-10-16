@@ -40,7 +40,7 @@ export function JoinScreen() {
 
   if (lookup.status === "missing")
     return (
-      <main className="flex flex-1 flex-col justify-center gap-4 px-5">
+      <main className="flex flex-1 flex-col justify-center gap-4 px-5 lg:mx-auto lg:w-full lg:max-w-md">
         <EmptyState>
           We couldn&apos;t find a flat with code <span className="font-mono font-semibold">{code.toUpperCase()}</span>. Double-check it with
           whoever invited you.
@@ -67,7 +67,7 @@ export function JoinScreen() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-5 pb-10 pt-16">
+    <main className="flex flex-1 flex-col px-5 pb-10 pt-16 lg:mx-auto lg:w-full lg:max-w-md lg:pt-24">
       <p className="text-sm font-medium text-muted">You&apos;ve been invited to</p>
       <h1 className="mt-1 text-3xl font-bold tracking-tight">{flat.name}</h1>
       {members.length > 0 && (

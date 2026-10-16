@@ -8,15 +8,26 @@ import type { Settlement } from "@/lib/types";
 import { getSettlements } from "./api";
 import { demoSettlements } from "./demo";
 
+// Demo flat: payments recorded this session are kept in memory (reset on page refresh),
+// so Settle up can be shown end to end without writing to Supabase.
+let demoLog: Settlement[] = demoSettlements;
+
+export function recordDemoSettlement(from: string, to: string, pence: number) {
+  demoLog = [
+    { id: `demo-${Date.now()}`, flat_id: DEMO_FLAT_ID, from_member: from, to_member: to, amount_pence: pence, created_at: new Date().toISOString() },
+    ...demoLog,
+  ];
+}
+
 /** Live list of the flat's recorded payments between flatmates. */
 export function useSettlements() {
   const { flat } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
-  const [settlements, setSettlements] = useState<Settlement[] | null>(isDemo ? demoSettlements : null);
+  const [settlements, setSettlements] = useState<Settlement[] | null>(isDemo ? demoLog : null);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    if (isDemo) return;
+    if (isDemo) return setSettlements(demoLog);
     try {
       setSettlements(await getSettlements(flat.id));
       setError(null);

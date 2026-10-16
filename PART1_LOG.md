@@ -167,3 +167,20 @@ IDEA.md lists shadcn as optional. `npx shadcn@latest mcp init --client claude` l
 - Every list had a border on top of a fill, so the screens felt boxy. The skill says "whitespace over borders".
 - The hero was the loudest element but didn't say whether you owe or are owed. Colouring the number by meaning makes it the clear hero number.
 - Split and Chores screens belong to Parts 2 and 3, so I changed only the shared kit, tokens and layout (Part 1). Their screens pick up the new look with no edits.
+
+## Desktop layout (lg ≥ 1024px), phones unchanged
+**What changed**
+- Root layout: the phone-width column (`max-w-md`) now only applies below `lg`.
+- Flat layout: below `lg` it's the header plus the bottom tab bar, as before. From `lg` up the tab bar is hidden and a sticky left `Sidebar` (240px: logo + the same 4 tabs) takes over. Content sits in a centred `max-w-3xl` column.
+- `Fab`: on desktop it lines up with the content column's bottom-right corner, since there's no tab bar to sit above.
+- `Sheet`: from `sm` up it's a centred dialog (`rounded-3xl`, `animate-pop-in`, no grab handle). Phones still get the bottom sheet.
+- Home: on desktop, chores and bounties go in the left column and Activity in the right. The skeleton matches.
+- Landing: on desktop, the pitch and feature cards go on the left and the form on the right. Join is centred at `max-w-md`.
+
+**Why**
+- On a laptop the app was a 448px strip with a phone tab bar floating at the bottom. A sidebar is the standard desktop pattern, and a 768px column keeps rows readable without stretching.
+- All of it is done in the layout and kit (Part 1), so Split and Chores get the desktop layout without any changes to their screens.
+
+## Settle up works on the demo flat
+- `SettleUpSheet` used to refuse to record payments on `/flat/demo`. Now it calls `recordDemoSettlement`, which `useSettlements` keeps in memory: a module-level log that starts from `demoSettlements`. The hook's `reload` reads that log, so Balances and History update straight away, just as on a real flat.
+- **Why:** Settle up is a key demo moment and the demo flat has no database behind it. Payments live in memory only, so a refresh resets the demo to a clean state. Supabase is never touched.
