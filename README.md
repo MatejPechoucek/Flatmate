@@ -52,7 +52,7 @@ npm run dev   # http://localhost:3000
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm run test:unit` | Money, share, balance and schedule maths (`node --test`, no setup) |
 | `npm run test:db` | Chore SQL functions against a disposable local Postgres (needs Postgres on `/tmp`, or set `TEST_DATABASE_URL`) |
-| `npm run test:e2e` | Playwright browser tests (also needs local Postgres) |
+| `npm run test:e2e` | Playwright browser tests (needs local Postgres and a local `playwright.config.ts`, which isn't in the repo) |
 | `npm run build` | Production build |
 
 ## Deploy

@@ -48,6 +48,7 @@ next-env.d.ts
 
 !.env.example
 
-# Chore integration test artifacts
+# Playwright: config is kept locally, not in the repo; plus test artifacts
+/playwright.config.ts
 /test-results/
 /playwright-report/
