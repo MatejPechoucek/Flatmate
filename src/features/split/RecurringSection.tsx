@@ -8,12 +8,14 @@ import { formatPence } from "@/lib/money";
 import type { RecurringExpense } from "@/lib/types";
 import { Avatar, Badge, Button, List, ListRow, Section } from "@/components/ui";
 import { deleteRecurringExpense, setRecurringActive } from "./api";
+import { demoDeleteRecurring, demoSetRecurringActive } from "./demoStore";
 
 const nextLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 /** Recurring bill rules. Only the payer can pause, resume or delete their own bill. */
 export function RecurringSection({ rules }: { rules: RecurringExpense[] | null }) {
   const { flat, me, memberName, realName } = useFlat();
+  const isDemo = flat.id === DEMO_FLAT_ID; // demo flat: in-memory store
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,6 @@ export function RecurringSection({ rules }: { rules: RecurringExpense[] | null }
   if (!rules || rules.length === 0) return null; // created from the add sheet's Weekly/Monthly toggle
 
   async function run(id: string, action: () => Promise<void>) {
-    if (flat.id === DEMO_FLAT_ID) return setError("This is the demo flat. Create a real flat to manage bills.");
     setBusy(id);
     setError(null);
     try {
@@ -59,7 +60,7 @@ export function RecurringSection({ rules }: { rules: RecurringExpense[] | null }
                   !r.active && <Badge>Paused</Badge>
                 ) : confirmingDelete === r.id ? (
                   <div className="flex gap-1">
-                    <Button size="sm" variant="danger" disabled={busy === r.id} onClick={() => run(r.id, () => deleteRecurringExpense(r.id))}>
+                    <Button size="sm" variant="danger" disabled={busy === r.id} onClick={() => run(r.id, async () => (isDemo ? demoDeleteRecurring(r.id) : deleteRecurringExpense(r.id)))}>
                       Delete
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(null)}>
@@ -73,7 +74,7 @@ export function RecurringSection({ rules }: { rules: RecurringExpense[] | null }
                       variant="secondary"
                       disabled={busy === r.id}
                       aria-label={r.active ? "Pause" : "Resume"}
-                      onClick={() => run(r.id, () => setRecurringActive(r.id, !r.active))}
+                      onClick={() => run(r.id, async () => (isDemo ? demoSetRecurringActive(r.id, !r.active) : setRecurringActive(r.id, !r.active)))}
                     >
                       {r.active ? <Pause size={14} /> : <Play size={14} />}
                     </Button>

@@ -6,7 +6,7 @@ import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import type { Settlement } from "@/lib/types";
 import { getSettlements } from "./api";
-import { getDemoSettlements, subscribeDemoSettlements } from "./demoStore";
+import { getDemoSettlements, subscribeDemo } from "./demoStore";
 
 /** Live list of the flat's recorded payments between flatmates. */
 export function useSettlements() {
@@ -14,7 +14,7 @@ export function useSettlements() {
   const isDemo = flat.id === DEMO_FLAT_ID;
   const [settlements, setSettlements] = useState<Settlement[] | null>(null);
   // Demo flat: payments live in memory (see demoStore) instead of the database.
-  const demoSettlements = useSyncExternalStore(subscribeDemoSettlements, getDemoSettlements, getDemoSettlements);
+  const demoSettlements = useSyncExternalStore(subscribeDemo, getDemoSettlements, getDemoSettlements);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {

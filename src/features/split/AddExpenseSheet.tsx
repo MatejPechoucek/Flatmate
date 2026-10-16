@@ -9,6 +9,7 @@ import { Amount, Avatar, Button, Input, List, ListRow, SegmentedControl, Sheet }
 import type { SplitType } from "@/lib/types";
 import { addExpense, computeShares, createRecurringExpense, editExpense, remaining, SplitError, type ExpenseWithShares } from "./api";
 import { startOfDayIso, type Interval } from "./schedule";
+import { demoAddExpense, demoCreateRecurring, demoEditExpense } from "./demoStore";
 
 /** Today as a yyyy-mm-dd date input value, in the user's timezone. */
 const todayInput = () => new Date().toLocaleDateString("en-CA");
@@ -94,27 +95,23 @@ export function AddExpenseSheet({
 
   async function save() {
     if (!canSave || !shares || amountPence === null) return;
-    if (flat.id === DEMO_FLAT_ID) return setSaveError("This is the demo flat. Create a real flat to save expenses.");
 
     setSaving(true);
     setSaveError(null);
     try {
-      if (editing) {
+      const firstDueAt = startDate === todayInput() ? new Date().toISOString() : startOfDayIso(startDate); // today → due now
+      const recurring = { payerId, description, amountPence, splitType, values, interval: repeat as Interval, firstDueAt };
+      if (flat.id === DEMO_FLAT_ID) {
+        // Demo flat: same actions against the in-memory store.
+        if (editing) demoEditExpense(editing.id, me.id, { description, amountPence, payerId, splitType, shares });
+        else if (repeat === "once") demoAddExpense({ flatId: flat.id, payerId, createdBy: me.id, description, amountPence, splitType, shares });
+        else demoCreateRecurring(recurring);
+      } else if (editing) {
         await editExpense(editing.id, me.id, { description, amountPence, payerId, splitType, shares });
       } else if (repeat === "once") {
         await addExpense({ flatId: flat.id, payerId, createdBy: me.id, description, amountPence, splitType, shares });
       } else {
-        await createRecurringExpense({
-          flatId: flat.id,
-          payerId,
-          description,
-          amountPence,
-          splitType,
-          values,
-          interval: repeat,
-          // Today → due right now, so the first bill appears immediately.
-          firstDueAt: startDate === todayInput() ? new Date().toISOString() : startOfDayIso(startDate),
-        });
+        await createRecurringExpense({ flatId: flat.id, ...recurring });
       }
       onSaved?.();
       onClose();

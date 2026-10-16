@@ -1,17 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useFlat } from "@/lib/flat-context";
 import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import { getExpenses, type ExpenseWithShares } from "./api";
-import { demoSplitExpenses } from "./demo";
+import { getDemoExpenses, subscribeDemo } from "./demoStore";
 
 /** Live list of the flat's expenses. Refetches whenever any flatmate changes an expense. */
 export function useExpenses() {
   const { flat } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
-  const [expenses, setExpenses] = useState<ExpenseWithShares[] | null>(isDemo ? demoSplitExpenses : null);
+  const [expenses, setExpenses] = useState<ExpenseWithShares[] | null>(null);
+  // Demo flat: in-memory store (see demoStore), newest first, deleted ones hidden like the real query.
+  const allDemo = useSyncExternalStore(subscribeDemo, getDemoExpenses, getDemoExpenses);
+  const demoExpenses = useMemo(
+    () => allDemo.filter((e) => !e.deleted_at).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    [allDemo],
+  );
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -31,5 +37,6 @@ export function useExpenses() {
 
   useRealtime(flat.id, isDemo ? [] : ["expenses", "expense_shares", "expense_changes"], reload);
 
-  return { expenses, loading: expenses === null && !error, error, reload };
+  const list = isDemo ? demoExpenses : expenses;
+  return { expenses: list, loading: list === null && !error, error, reload };
 }

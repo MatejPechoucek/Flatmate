@@ -1,19 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useFlat } from "@/lib/flat-context";
 import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import type { ExpenseChange } from "@/lib/types";
 import { dismissNotice, getMyNotices } from "./api";
 import { isNoticeFor } from "./changes";
-import { demoChanges } from "./demo";
+import { demoDismissNotice, getDemoChanges, getDemoDismissed, subscribeDemo } from "./demoStore";
 
 /** Edits/deletes by others that affect me and that I haven't dismissed. Live. */
 export function useNotices() {
   const { flat, me } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
-  const [notices, setNotices] = useState<ExpenseChange[]>(isDemo ? demoChanges.filter((c) => isNoticeFor(c, me.id)) : []);
+  const [notices, setNotices] = useState<ExpenseChange[]>([]);
+  // Demo flat: notices come from the in-memory change log, newest first, minus dismissed ones.
+  const demoChanges = useSyncExternalStore(subscribeDemo, getDemoChanges, getDemoChanges);
+  const demoDismissed = useSyncExternalStore(subscribeDemo, getDemoDismissed, getDemoDismissed);
+  const demoNotices = useMemo(
+    () => demoChanges.filter((c) => isNoticeFor(c, me.id) && !demoDismissed.includes(c.id)).reverse(),
+    [demoChanges, demoDismissed, me.id],
+  );
 
   const reload = useCallback(async () => {
     if (isDemo) return;
@@ -33,11 +40,12 @@ export function useNotices() {
 
   const dismiss = useCallback(
     async (id: string) => {
+      if (isDemo) return demoDismissNotice(id);
       setNotices((prev) => prev.filter((n) => n.id !== id)); // optimistic
-      if (!isDemo) await dismissNotice(id, me.id).catch(console.error);
+      await dismissNotice(id, me.id).catch(console.error);
     },
     [isDemo, me.id],
   );
 
-  return { notices, dismiss };
+  return { notices: isDemo ? demoNotices : notices, dismiss };
 }

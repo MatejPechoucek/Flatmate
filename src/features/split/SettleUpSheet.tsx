@@ -7,7 +7,7 @@ import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence, parsePounds, payLink } from "@/lib/money";
 import { Avatar, Button, Input, Sheet } from "@/components/ui";
 import { recordSettlement, type Transfer } from "./api";
-import { addDemoSettlement } from "./demoStore";
+import { demoAddSettlement } from "./demoStore";
 
 /**
  * Pay a flatmate what you owe them: open their PayPal.me with the amount pre-filled, then
@@ -41,7 +41,7 @@ export function SettleUpSheet({ transfer, onClose, onSaved }: { transfer: Transf
   async function confirm() {
     if (problem || !pence) return;
     if (isDemo) {
-      addDemoSettlement(me.id, to!.id, pence);
+      demoAddSettlement(me.id, to!.id, pence);
       onSaved?.();
       return onClose();
     }
