@@ -22,7 +22,7 @@ export function JoinScreen() {
 
       <div className="mt-10 flex flex-col gap-4">
         <Input label="Your name" placeholder="What do your flatmates call you?" autoFocus />
-        <Input label="Monzo.me username (optional)" placeholder="so flatmates can pay you back" />
+        <Input label="PayPal.me username (optional)" placeholder="so flatmates can pay you back" />
         <Button onClick={() => router.push(`/flat/${DEMO_FLAT_ID}`)}>Join flat</Button>
       </div>
 

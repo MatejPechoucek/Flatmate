@@ -1,30 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { Receipt, Repeat } from "lucide-react";
+import { HandCoins, Receipt, Repeat } from "lucide-react";
 import { useFlat } from "@/lib/flat-context";
 import { Amount, Avatar, Badge, Button, EmptyState, Fab, List, ListRow, Section } from "@/components/ui";
 import { timeAgo } from "@/lib/dates";
-import { shareOf, type ExpenseWithShares } from "./api";
+import type { Settlement } from "@/lib/types";
+import { shareOf, type ExpenseWithShares, type Transfer } from "./api";
 import { useExpenses } from "./useExpenses";
 import { useSettlements } from "./useSettlements";
 import { BalancesSection } from "./BalancesSection";
 import { AddExpenseSheet } from "./AddExpenseSheet";
 import { ExpenseDetailSheet } from "./ExpenseDetailSheet";
+import { SettleUpSheet } from "./SettleUpSheet";
 
 // Entry point for the Split tab (/flat/[flatId]/split).
 export function SplitScreen() {
   const { expenses, loading, error, reload } = useExpenses();
-  const { settlements, error: settlementsError } = useSettlements();
+  const { settlements, error: settlementsError, reload: reloadSettlements } = useSettlements();
   const [adding, setAdding] = useState(false);
+  const [settling, setSettling] = useState<Transfer | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const opened = expenses?.find((e) => e.id === openId);
 
+  // Expenses and payments in one timeline, newest first.
+  const history: HistoryItem[] = [
+    ...(expenses ?? []).map((e) => ({ kind: "expense" as const, at: e.created_at, expense: e })),
+    ...(settlements ?? []).map((s) => ({ kind: "payment" as const, at: s.created_at, payment: s })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
+
   return (
     <div className="flex flex-col gap-6">
-      <BalancesSection expenses={expenses} settlements={settlements} error={error ?? settlementsError} />
+      <BalancesSection expenses={expenses} settlements={settlements} error={error ?? settlementsError} onSettle={setSettling} />
 
-      <Section title="Expenses">
+      <Section title="History">
         {loading ? (
           <EmptyState>Loading expenses…</EmptyState>
         ) : error ? (
@@ -34,13 +43,17 @@ export function SplitScreen() {
               Try again
             </Button>
           </EmptyState>
-        ) : expenses!.length === 0 ? (
+        ) : history.length === 0 ? (
           <EmptyState icon={<Receipt className="text-muted" />}>No expenses yet. Add the first one with the button below.</EmptyState>
         ) : (
           <List>
-            {expenses!.map((e) => (
-              <ExpenseRow key={e.id} expense={e} onOpen={() => setOpenId(e.id)} />
-            ))}
+            {history.map((item) =>
+              item.kind === "expense" ? (
+                <ExpenseRow key={item.expense.id} expense={item.expense} onOpen={() => setOpenId(item.expense.id)} />
+              ) : (
+                <PaymentRow key={item.payment.id} payment={item.payment} />
+              ),
+            )}
           </List>
         )}
       </Section>
@@ -48,7 +61,29 @@ export function SplitScreen() {
       <Fab label="Add expense" onClick={() => setAdding(true)} />
       {adding && <AddExpenseSheet onClose={() => setAdding(false)} onSaved={reload} />}
       {opened && <ExpenseDetailSheet expense={opened} onClose={() => setOpenId(null)} />}
+      {settling && <SettleUpSheet transfer={settling} onClose={() => setSettling(null)} onSaved={reloadSettlements} />}
     </div>
+  );
+}
+
+type HistoryItem =
+  | { kind: "expense"; at: string; expense: ExpenseWithShares }
+  | { kind: "payment"; at: string; payment: Settlement };
+
+function PaymentRow({ payment: p }: { payment: Settlement }) {
+  const { memberName, realName } = useFlat();
+  const to = memberName(p.to_member);
+  return (
+    <ListRow
+      leading={
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-positive-soft text-positive">
+          <HandCoins size={18} />
+        </span>
+      }
+      title={`${memberName(p.from_member)} paid ${to === "You" ? "you" : realName(p.to_member)}`}
+      subtitle={`Payment · ${timeAgo(p.created_at)}`}
+      trailing={<Amount pence={p.amount_pence} className="text-positive" />}
+    />
   );
 }
 

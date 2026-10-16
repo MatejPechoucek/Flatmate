@@ -36,7 +36,7 @@ const topics: { icon: ReactNode; title: string; body: ReactNode }[] = [
     title: "Settling up",
     body: (
       <>
-        Tap <b>Settle up</b> to open their Monzo or PayPal with the amount filled in. Once you&apos;ve paid, confirm it
+        Tap <b>Settle up</b> to open their PayPal with the amount filled in. Once you&apos;ve paid, confirm it
         here and everyone&apos;s balances update. You can also pay part of what you owe, or pay by cash or bank
         transfer.
       </>

@@ -109,12 +109,17 @@ export async function getBalances(flatId: string, meId: string): Promise<{ membe
   return balancesFor(await getSettlementPlan(flatId), meId);
 }
 
-export async function recordSettlement(flatId: string, fromMember: string, toMember: string, pence: number): Promise<void> {
-  void flatId;
-  void fromMember;
-  void toMember;
-  void pence;
-  throw new Error("TODO(split): recordSettlement");
+/** The payer confirms they've paid `toMember` (via PayPal, bank transfer or cash). */
+export async function recordSettlement(flatId: string, fromMember: string, toMember: string, pence: number): Promise<Settlement> {
+  if (!Number.isInteger(pence) || pence <= 0) throw new SplitError("Enter an amount above £0.");
+  if (fromMember === toMember) throw new SplitError("You can't pay yourself.");
+  const { data, error } = await supabase
+    .from("settlements")
+    .insert({ flat_id: flatId, from_member: fromMember, to_member: toMember, amount_pence: pence })
+    .select()
+    .single<Settlement>();
+  if (error) throw new Error(`Couldn't record the payment: ${error.message}`);
+  return data;
 }
 
 /**

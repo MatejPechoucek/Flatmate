@@ -12,10 +12,12 @@ export function parsePounds(input: string): number | null {
   return Math.round(parseFloat(cleaned) * 100);
 }
 
-/** Monzo.me link with the amount pre-filled, falling back to PayPal.me. */
+/** PayPal.me username from whatever was typed: "priyak", "@priyak" or "paypal.me/priyak". */
+export function normalizePayHandle(input: string): string {
+  return input.trim().replace(/^(https?:\/\/)?(www\.)?paypal\.me\//i, "").replace(/^@/, "").split(/[/?#]/)[0];
+}
+
+/** PayPal.me link with the amount pre-filled in GBP. */
 export function payLink(handle: string, pence: number): string {
-  const amount = (pence / 100).toFixed(2);
-  return handle.startsWith("paypal:")
-    ? `https://paypal.me/${handle.slice(7)}/${amount}GBP`
-    : `https://monzo.me/${handle}/${amount}`;
+  return `https://paypal.me/${encodeURIComponent(normalizePayHandle(handle))}/${(pence / 100).toFixed(2)}GBP`;
 }

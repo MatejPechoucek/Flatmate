@@ -25,7 +25,7 @@ Functions marked **CONTRACT** in an `api.ts` are used by another part. Keep thei
 2. `addExpense` → wire up `AddExpenseSheet` (**CONTRACT**: Chores calls it for buyouts).
 3. Expense list from Supabase, with `useRealtime(flat.id, ["expenses", "expense_shares"], reload)`.
 4. `getBalances` → Balances section (**CONTRACT**: Home uses it).
-5. **Settle up:** `payLink()` opens Monzo/PayPal, then `recordSettlement`.
+5. **Settle up:** `payLink()` opens PayPal.me, then `recordSettlement`.
 6. Recurring expenses: save from the sheet's Weekly/Monthly toggle + `catchUpRecurringExpenses`.
 
 ## Part 3 · Chores: fairness and buyouts

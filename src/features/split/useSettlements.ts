@@ -6,12 +6,13 @@ import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import type { Settlement } from "@/lib/types";
 import { getSettlements } from "./api";
+import { demoSettlements } from "./demo";
 
 /** Live list of the flat's recorded payments between flatmates. */
 export function useSettlements() {
   const { flat } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
-  const [settlements, setSettlements] = useState<Settlement[] | null>(isDemo ? [] : null);
+  const [settlements, setSettlements] = useState<Settlement[] | null>(isDemo ? demoSettlements : null);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {

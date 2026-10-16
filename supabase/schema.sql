@@ -18,7 +18,7 @@ create table members (
   id         uuid primary key default gen_random_uuid(),
   flat_id    uuid not null references flats(id) on delete cascade,
   name       text not null,
-  pay_handle text,                     -- monzo.me / paypal.me username
+  pay_handle text,                     -- paypal.me username
   created_at timestamptz not null default now()
 );
 

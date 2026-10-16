@@ -25,9 +25,9 @@ const member = (id: string, name: string, pay_handle: string | null = null): Mem
 });
 
 export const demoMembers: Member[] = [
-  member("m-alex", "Alex", "alexmonzo"),
+  member("m-alex", "Alex", "alexj"),
   member("m-sam", "Sam", "samj"),
-  member("m-priya", "Priya", "paypal:priyak"),
+  member("m-priya", "Priya", "priyak"),
   member("m-tom", "Tom"),
 ];
 

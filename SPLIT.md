@@ -9,11 +9,12 @@ Owner: Split · Folder: `src/features/split/` · Tables: `expenses`, `expense_sh
 | Participants | Each expense has a toggle per flatmate; **everyone is in by default**. The payer can be excluded (paying on someone's behalf). |
 | Split modes | **Equal** (default) · **£ amounts** · **% percentages**. Leftover pence go to the payer, or to the first participant if the payer isn't in. |
 | Balances | **Simplified from the start**: the fewest payments that settle the whole flat. |
-| Settle up | The **payer marks it paid**: Settle up → Monzo/PayPal opens → "Did you pay £X to Sam?" → Yes records a settlement. |
+| Settle up | The **payer marks it paid**: Settle up → PayPal opens → "Did you pay £X to Sam?" → Yes records a settlement. |
 | Edit | Only the flatmate who **added** the expense can edit it. Affected flatmates get an in-app notice showing before → after. |
 | Delete | The creator can **soft delete** (hidden from balances, kept in the database). Affected flatmates get a notice. |
 | Notices | The expense shows an **"Edited"** badge. A dismissible banner at the top of Split reads e.g. "Alex changed Tesco shop £42.60 → £52.60 (your share £10.65 → £13.15)". |
 | Recurring | Fixed amount, weekly/monthly, with a **start date (default today)**. The first expense is created on the start date. Each generated expense can be edited like any other. |
+| Payments | **PayPal.me links only.** Apple Pay / Google Pay can't send money to a person in the UK, and on the web they only pay merchants. Cash or bank transfer is the fallback. |
 | Buyouts | Created by Chores through `addExpense({ bountyId })`. **These can't be edited or deleted**, because the bounty is the source of truth. |
 
 ---
@@ -84,7 +85,7 @@ UI:
 ## 5 · Settle up · ~10 min
 
 1. Tap **Settle up** → SettleUpSheet: "Pay Priya £3.45".
-2. If Priya has a `pay_handle`: a **"Open Monzo"** button opens `payLink(handle, pence)` in a new tab. Otherwise show "Priya hasn't added a payment link, so pay her by bank transfer or cash."
+2. If Priya has a `pay_handle`: an **"Open PayPal"** button opens `payLink(handle, pence)` in a new tab. Otherwise show "Priya hasn't added a payment link, so pay her by bank transfer or cash."
 3. Then: **"I've paid £3.45"** → `recordSettlement(flatId, me, priya, pence)`.
 4. Balances recalculate, since settlements are part of the net total, and the feed shows "You paid Priya £3.45".
 
