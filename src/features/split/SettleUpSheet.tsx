@@ -7,6 +7,7 @@ import { DEMO_FLAT_ID } from "@/lib/mock";
 import { formatPence, parsePounds, payLink } from "@/lib/money";
 import { Avatar, Button, Input, Sheet } from "@/components/ui";
 import { recordSettlement, type Transfer } from "./api";
+import { addDemoSettlement } from "./demoStore";
 
 /**
  * Pay a flatmate what you owe them: open their PayPal.me with the amount pre-filled, then
@@ -15,6 +16,7 @@ import { recordSettlement, type Transfer } from "./api";
 export function SettleUpSheet({ transfer, onClose, onSaved }: { transfer: Transfer; onClose: () => void; onSaved?: () => void }) {
   const { flat, members, me } = useFlat();
   const to = members.find((m) => m.id === transfer.to);
+  const isDemo = flat.id === DEMO_FLAT_ID;
   const [amountText, setAmountText] = useState((transfer.pence / 100).toFixed(2));
   const [step, setStep] = useState<"pay" | "confirm">(to?.pay_handle ? "pay" : "confirm");
   const [saving, setSaving] = useState(false);
@@ -31,13 +33,18 @@ export function SettleUpSheet({ transfer, onClose, onSaved }: { transfer: Transf
 
   function openPayment() {
     if (!to?.pay_handle || !pence) return;
-    window.open(payLink(to.pay_handle, pence), "_blank", "noopener");
+    // Demo handles are made up and could belong to real people, so never send money there.
+    if (!isDemo) window.open(payLink(to.pay_handle, pence), "_blank", "noopener");
     setStep("confirm");
   }
 
   async function confirm() {
     if (problem || !pence) return;
-    if (flat.id === DEMO_FLAT_ID) return setError("This is the demo flat. Create a real flat to record payments.");
+    if (isDemo) {
+      addDemoSettlement(me.id, to!.id, pence);
+      onSaved?.();
+      return onClose();
+    }
     setSaving(true);
     setError(null);
     try {
@@ -79,6 +86,12 @@ export function SettleUpSheet({ transfer, onClose, onSaved }: { transfer: Transf
         </>
       ) : (
         <>
+          {isDemo && to.pay_handle && (
+            <p className="rounded-2xl bg-surface-2 p-4 text-sm text-muted">
+              Demo flat: PayPal isn&apos;t opened. In a real flat this would open{" "}
+              <span className="font-medium text-foreground">{payLink(to.pay_handle, pence ?? transfer.pence).replace("https://", "")}</span>.
+            </p>
+          )}
           {!to.pay_handle && (
             <p className="rounded-2xl bg-surface-2 p-4 text-sm text-muted">
               {to.name} hasn&apos;t added a PayPal.me link. Pay them by bank transfer or cash, then confirm here.

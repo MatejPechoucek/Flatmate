@@ -1,18 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useFlat } from "@/lib/flat-context";
 import { DEMO_FLAT_ID } from "@/lib/mock";
 import { useRealtime } from "@/lib/useRealtime";
 import type { Settlement } from "@/lib/types";
 import { getSettlements } from "./api";
-import { demoSettlements } from "./demo";
+import { getDemoSettlements, subscribeDemoSettlements } from "./demoStore";
 
 /** Live list of the flat's recorded payments between flatmates. */
 export function useSettlements() {
   const { flat } = useFlat();
   const isDemo = flat.id === DEMO_FLAT_ID;
-  const [settlements, setSettlements] = useState<Settlement[] | null>(isDemo ? demoSettlements : null);
+  const [settlements, setSettlements] = useState<Settlement[] | null>(null);
+  // Demo flat: payments live in memory (see demoStore) instead of the database.
+  const demoSettlements = useSyncExternalStore(subscribeDemoSettlements, getDemoSettlements, getDemoSettlements);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -32,5 +34,5 @@ export function useSettlements() {
 
   useRealtime(flat.id, isDemo ? [] : ["settlements"], reload);
 
-  return { settlements, error, reload };
+  return { settlements: isDemo ? demoSettlements : settlements, error, reload };
 }
