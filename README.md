@@ -8,7 +8,7 @@ Shared living rarely falls apart over maths. It falls apart over the conversatio
 
 ## How it works
 
-- **Split:** add an expense and split it equally, by amount or by percentage. Recurring bills (Wi-Fi, energy) appear on their own. Settle up with a pre-filled Monzo.me or PayPal.me link.
+- **Split:** add an expense and split it equally, by amount or by percentage. Recurring bills (Wi-Fi, energy) appear on their own. Settle up with a pre-filled PayPal.me link, or by cash or bank transfer.
 - **Chores:** every chore has an effort weight from 1 to 5. Each new task goes to whoever has done the fewest points in the last 28 days, so it's fair without anyone keeping score.
 - **Buyouts:** too busy this week? Put your chore up for `weight × £1`. The first flatmate to accept does it and gets paid through the shared ledger, and you keep the fairness points you paid for.
 - **No sign-up:** join a flat with a link or QR code and your name.

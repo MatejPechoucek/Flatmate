@@ -2,11 +2,16 @@
 // Owns tables: expenses, expense_shares, recurring_expenses, settlements.
 //
 // Functions marked CONTRACT are used by other parts — keep their signatures stable.
-import type { Expense, SplitType } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
+import type { Expense, ExpenseShare, Settlement, SplitType } from "@/lib/types";
+import { balancesFor, netBalances, simplifyDebts, type Transfer } from "./balances";
+import { SplitError } from "./shares";
 
 export interface NewExpense {
   flatId: string;
   payerId: string;
+  /** Who added it; only they can edit/delete it later. */
+  createdBy: string;
   description: string;
   amountPence: number;
   splitType: SplitType;
@@ -16,55 +21,136 @@ export interface NewExpense {
 }
 
 /**
- * CONTRACT (used by Chores for buyouts). Inserts the expense + its shares.
- * Buyout example: { payerId: doer, shares: { [offerer]: amount }, bountyId }.
+ * CONTRACT (general expense inserts). Inserts the expense + its shares.
+ * Not for buyouts: Chores' accept_bounty SQL function writes those atomically.
  */
 export async function addExpense(input: NewExpense): Promise<Expense> {
-  void input;
-  throw new Error("TODO(split): addExpense");
+  return insertExpense(input);
+}
+
+/** Thrown when a recurring occurrence already exists (another device generated it first). */
+export class DuplicateOccurrence extends Error {}
+
+/** Shared by addExpense and recurring generation. Not for use outside Split. */
+export async function insertExpense(
+  input: NewExpense & { recurringExpenseId?: string; dueAt?: string },
+): Promise<Expense> {
+  const description = input.description.trim();
+  if (!description) throw new SplitError("Add a description.");
+  if (!Number.isInteger(input.amountPence) || input.amountPence <= 0) throw new SplitError("Enter an amount above £0.");
+  const shareRows = Object.entries(input.shares).filter(([, pence]) => pence > 0);
+  if (shareRows.length === 0) throw new SplitError("Pick at least one person to split with.");
+  const total = shareRows.reduce((sum, [, pence]) => sum + pence, 0);
+  if (total !== input.amountPence) throw new SplitError("Shares don't add up to the total.");
+
+  const { data: expense, error } = await supabase
+    .from("expenses")
+    .insert({
+      flat_id: input.flatId,
+      payer_id: input.payerId,
+      created_by: input.createdBy,
+      description,
+      amount_pence: input.amountPence,
+      split_type: input.splitType,
+      bounty_id: input.bountyId ?? null,
+      recurring_expense_id: input.recurringExpenseId ?? null,
+      due_at: input.dueAt ?? null,
+      // Occurrences sit in history on their due date, not when they were generated.
+      ...(input.dueAt ? { created_at: input.dueAt } : {}),
+    })
+    .select()
+    .single<Expense>();
+  if (error?.code === "23505") throw new DuplicateOccurrence(error.message);
+  if (error) throw new Error(`Couldn't save the expense: ${error.message}`);
+
+  const { error: sharesError } = await supabase
+    .from("expense_shares")
+    .insert(shareRows.map(([member_id, amount_pence]) => ({ expense_id: expense.id, member_id, amount_pence })));
+  if (sharesError) {
+    // No transactions over the REST API: undo the expense so balances never see half a write.
+    await supabase.from("expenses").delete().eq("id", expense.id);
+    throw new Error(`Couldn't save the expense: ${sharesError.message}`);
+  }
+
+  return expense;
+}
+
+export { computeShares, remaining, SplitError } from "./shares";
+
+export type ExpenseWithShares = Expense & { expense_shares: ExpenseShare[] };
+
+/** All non-deleted expenses for the flat, newest first, each with its shares. */
+export async function getExpenses(flatId: string): Promise<ExpenseWithShares[]> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*, expense_shares(*)")
+    .eq("flat_id", flatId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .returns<ExpenseWithShares[]>();
+  if (error) throw new Error(`Couldn't load expenses: ${error.message}`);
+  return data;
+}
+
+/** Pence `memberId` owes for this expense (0 if not part of it). */
+export function shareOf(expense: ExpenseWithShares, memberId: string): number {
+  return expense.expense_shares.find((s) => s.member_id === memberId)?.amount_pence ?? 0;
+}
+
+export { balancesFor, netBalances, simplifyDebts, type Transfer } from "./balances";
+
+export async function getSettlements(flatId: string): Promise<Settlement[]> {
+  const { data, error } = await supabase
+    .from("settlements")
+    .select("*")
+    .eq("flat_id", flatId)
+    .order("created_at", { ascending: false })
+    .returns<Settlement[]>();
+  if (error) throw new Error(`Couldn't load payments: ${error.message}`);
+  return data;
+}
+
+/** Fewest-payments plan that settles the whole flat. */
+export async function getSettlementPlan(flatId: string): Promise<Transfer[]> {
+  const [expenses, settlements] = await Promise.all([getExpenses(flatId), getSettlements(flatId)]);
+  return simplifyDebts(netBalances(expenses, settlements));
 }
 
 /**
- * Turn the user's split input into final pence per member.
- * equal: values ignored · amount: values are pence · percent: values are 0–100.
- * Rounding leftovers go to the payer.
- */
-export function computeShares(
-  amountPence: number,
-  splitType: SplitType,
-  payerId: string,
-  values: Record<string, number>,
-): Record<string, number> {
-  void amountPence;
-  void splitType;
-  void payerId;
-  void values;
-  throw new Error("TODO(split): computeShares");
-}
-
-/**
- * CONTRACT (used by Home). Net balance per other member, from `meId`'s perspective:
- * positive = they owe me, negative = I owe them. Simplified to the fewest payments if time allows.
+ * CONTRACT (used by Home). `meId`'s side of the simplified plan, one row per flatmate they
+ * pay or get paid by: positive = they pay me, negative = I pay them. Empty = all settled.
  */
 export async function getBalances(flatId: string, meId: string): Promise<{ member_id: string; pence: number }[]> {
-  void flatId;
-  void meId;
-  throw new Error("TODO(split): getBalances");
+  return balancesFor(await getSettlementPlan(flatId), meId);
 }
 
-export async function recordSettlement(flatId: string, fromMember: string, toMember: string, pence: number): Promise<void> {
-  void flatId;
-  void fromMember;
-  void toMember;
-  void pence;
-  throw new Error("TODO(split): recordSettlement");
+/** The payer confirms they've paid `toMember` (via PayPal, bank transfer or cash). */
+export async function recordSettlement(flatId: string, fromMember: string, toMember: string, pence: number): Promise<Settlement> {
+  if (!Number.isInteger(pence) || pence <= 0) throw new SplitError("Enter an amount above £0.");
+  if (fromMember === toMember) throw new SplitError("You can't pay yourself.");
+  const { data, error } = await supabase
+    .from("settlements")
+    .insert({ flat_id: flatId, from_member: fromMember, to_member: toMember, amount_pence: pence })
+    .select()
+    .single<Settlement>();
+  if (error) throw new Error(`Couldn't record the payment: ${error.message}`);
+  return data;
 }
 
-/**
- * CONTRACT (called by FlatProvider on open). Create every recurring expense occurrence whose
- * next_due_at <= now, then advance next_due_at. UNIQUE (recurring_expense_id, due_at) makes
- * concurrent calls safe — ignore duplicate-key errors.
- */
-export async function catchUpRecurringExpenses(flatId: string): Promise<void> {
-  void flatId; // TODO(split)
-}
+export {
+  catchUpRecurringExpenses,
+  createRecurringExpense,
+  deleteRecurringExpense,
+  getRecurringExpenses,
+  setRecurringActive,
+} from "./recurring";
+export {
+  cannotChange,
+  deleteExpense,
+  dismissNotice,
+  editExpense,
+  getExpenseChanges,
+  getMyNotices,
+  snapshotOf,
+} from "./edits";
+export { diffFor, type Diff } from "./changes";

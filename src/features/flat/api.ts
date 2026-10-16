@@ -2,19 +2,13 @@
 // Owns tables: flats, members.
 import { supabase } from "@/lib/supabase";
 import { generateInviteCode, setMemberId } from "@/lib/identity";
+import { normalizePayHandle } from "@/lib/money";
 import type { Chore, ChoreTask, Expense, Flat, Member } from "@/lib/types";
 
 const clean = (s?: string) => s?.trim() || null;
 
-/** "@alex", "monzo.me/alex", "https://paypal.me/priya" → "alex" / "paypal:priya". */
-function normaliseHandle(raw?: string): string | null {
-  const h = clean(raw);
-  if (!h) return null;
-  const paypal = h.match(/paypal\.me\/([^/?\s]+)/i);
-  if (paypal) return `paypal:${paypal[1]}`;
-  if (/^paypal:/i.test(h)) return `paypal:${h.slice(7)}`;
-  return h.replace(/^https?:\/\//, "").replace(/^monzo\.me\//i, "").replace(/^@/, "").split(/[/?]/)[0];
-}
+/** Stored as a bare PayPal.me username ("@priya", "paypal.me/priya" → "priya"), or null. */
+const normaliseHandle = (raw?: string): string | null => (raw ? normalizePayHandle(raw) || null : null);
 
 /** Create a flat + its first member, remember them on this device (setMemberId). */
 export async function createFlat(input: { flatName: string; memberName: string; payHandle?: string }): Promise<{

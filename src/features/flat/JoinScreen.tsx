@@ -82,7 +82,7 @@ export function JoinScreen() {
       <form onSubmit={onJoin} className="mt-10 flex flex-col gap-4">
         <Input label="Your name" placeholder="What do your flatmates call you?" autoFocus value={name} onChange={(e) => setName(e.target.value)} required />
         <Input
-          label="Monzo.me username (optional)"
+          label="PayPal.me username (optional)"
           placeholder="so flatmates can pay you back"
           value={payHandle}
           onChange={(e) => setPayHandle(e.target.value)}
