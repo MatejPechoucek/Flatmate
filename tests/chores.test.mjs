@@ -239,3 +239,105 @@ test('demo browser role can call public RPCs but cannot bypass chore state or ca
     assert.equal(board.members.find(m=>m.id===t.assigned_to).fairness_score,5);
   } finally { await db.query('reset role'); }
 });
+
+test('concurrent offers share one price snapshot; only the offerer cancels and a new offer uses the current rate', async () => {
+  const f = await flat();
+  const c = await create(f, 4);
+  const t = await task(c.task_ids[0]);
+  const otherMember = f.members.find(id => id !== t.assigned_to);
+  await assert.rejects(rpc('offer_bounty', {p_task_id:t.id, p_member_id:otherMember}), /assignee/i);
+  // Editing the template must not change the effort of an existing task.
+  await db.query('update chores set weight=1 where id=$1', [c.chore_id]);
+  const clients = await Promise.all([connect(), connect()]);
+  const offers = await Promise.all(clients.map(client => rpc('offer_bounty', {
+    p_task_id:t.id, p_member_id:t.assigned_to,
+  }, client)));
+  assert.equal(offers[0].bounty_id, offers[1].bounty_id);
+  assert.equal(offers[0].bounty.amount_pence, 400);
+  assert.equal((await db.query('select count(*)::int as n from bounties where task_id=$1', [t.id])).rows[0].n, 1);
+  await db.query('update flats set buyout_rate_pence=150 where id=$1', [f.id]);
+  const retry = await rpc('offer_bounty', {p_task_id:t.id, p_member_id:t.assigned_to});
+  assert.equal(retry.bounty.amount_pence, 400);
+  await assert.rejects(rpc('cancel_bounty', {p_bounty_id:retry.bounty_id, p_member_id:otherMember}), /offerer/i);
+  const args = {p_bounty_id:retry.bounty_id, p_member_id:t.assigned_to};
+  await rpc('cancel_bounty', args);
+  await rpc('cancel_bounty', args);
+  const next = await rpc('offer_bounty', {p_task_id:t.id, p_member_id:t.assigned_to});
+  assert.notEqual(next.bounty_id, retry.bounty_id);
+  assert.equal(next.bounty.amount_pence, 600);
+  await assert.rejects(rpc('accept_bounty', {p_bounty_id:retry.bounty_id, p_member_id:otherMember}), /open/i);
+  const board = await rpc('get_chore_board', {p_flat_id:f.id, p_member_id:otherMember});
+  assert.deepEqual(board.bounties.map(b => b.id), [next.bounty_id]);
+  assert.equal((await task(t.id)).assigned_to, t.assigned_to);
+  assert.equal((await db.query('select count(*)::int as n from expenses where flat_id=$1', [f.id])).rows[0].n, 0);
+});
+
+test('acceptance remains idempotent after completion and supplies the complete Split ledger contract', async () => {
+  const f = await flat(); const {t,b,doer} = await offer(f);
+  const args = {p_bounty_id:b.bounty_id, p_member_id:doer};
+  const accepted = await rpc('accept_bounty', args);
+  assert.deepEqual(accepted, {flat_id:f.id, task_ids:[t.id], bounty_id:b.bounty_id, expense_id:accepted.expense_id});
+  await assert.rejects(rpc('complete_chore_task', {p_task_id:t.id, p_member_id:t.assigned_to}), /assignee/i);
+  await rpc('complete_chore_task', {p_task_id:t.id, p_member_id:doer});
+  assert.deepEqual(await rpc('accept_bounty', args), accepted);
+  const expenses = (await db.query(`select id, flat_id, payer_id, created_by, description,
+    amount_pence, split_type, bounty_id, deleted_at from expenses where bounty_id=$1`, [b.bounty_id])).rows;
+  assert.deepEqual(expenses, [{id:accepted.expense_id, flat_id:f.id, payer_id:doer, created_by:doer,
+    description:'Buyout: Bathroom', amount_pence:500, split_type:'amount', bounty_id:b.bounty_id, deleted_at:null}]);
+  const shares = (await db.query('select member_id, amount_pence from expense_shares where expense_id=$1', [accepted.expense_id])).rows;
+  assert.deepEqual(shares, [{member_id:t.assigned_to, amount_pence:500}]);
+  assert.equal((await task(t.id)).points_credited_to, t.assigned_to);
+});
+
+test('future completions and pending work do not affect fairness or lowest-score assignment', async () => {
+  const f = await flat(); const c = await create(f, 5);
+  await history(f, c.chore_id, f.members[0], 5, '-1 day');
+  await history(f, c.chore_id, f.members[1], 2, '1 day');
+  await history(f, c.chore_id, f.members[2], 3, '2 days');
+  await db.query('update chore_tasks set assigned_to=$2 where id=$1', [c.task_ids[0], f.members[0]]);
+  const board = await rpc('get_chore_board', {p_flat_id:f.id, p_member_id:f.members[0]});
+  assert.deepEqual(f.members.map(id => board.members.find(m => m.id === id).fairness_score), [0,2,3]);
+  const next = await create(f);
+  assert.equal((await task(next.task_ids[0])).assigned_to, f.members[0]);
+});
+
+test('one-off future dates assign immediately; paused recurrence waits and exact due time generates once with the current weight', async () => {
+  const f = await flat();
+  const oneOff = await create(f, 2, {p_due_at:'2099-01-01T09:00:00Z'});
+  assert.equal(oneOff.task_ids.length, 1);
+  assert.equal((await task(oneOff.task_ids[0])).due_at.toISOString(), '2099-01-01T09:00:00.000Z');
+  const recurring = await create(f, 2, {p_kind:'recurring', p_interval_days:7, p_due_at:'2099-01-01T09:00:00Z'});
+  await db.query('begin');
+  try {
+    await db.query('update chores set active=false, next_due_at=now(), weight=4 where id=$1', [recurring.chore_id]);
+    const args = {p_flat_id:f.id, p_member_id:f.members[0]};
+    assert.deepEqual((await rpc('catch_up_chores', args)).task_ids, []);
+    await db.query('update chores set active=true where id=$1', [recurring.chore_id]);
+    const caught = await rpc('catch_up_chores', args);
+    assert.equal(caught.task_ids.length, 1);
+    const generated = await task(caught.task_ids[0]);
+    assert.equal(generated.weight_snapshot, 4);
+    assert.equal(generated.due_at.getTime(), (await db.query('select now() as due')).rows[0].due.getTime());
+    assert.deepEqual((await rpc('catch_up_chores', args)).task_ids, []);
+    assert.equal((await task(oneOff.task_ids[0])).weight_snapshot, 2);
+  } finally { await db.query('rollback'); }
+});
+
+test('board reads and public assignee previews stay within the requested flat', async () => {
+  const f = await flat(); const other = await flat();
+  const c = await create(f); const foreign = await offer(other);
+  const board = await rpc('get_chore_board', {p_flat_id:f.id, p_member_id:f.members[0]});
+  assert.equal(board.flat.id, f.id);
+  assert.deepEqual(new Set(board.members.map(m => m.id)), new Set(f.members));
+  assert.deepEqual(board.chores.map(chore => chore.id), [c.chore_id]);
+  assert.deepEqual(board.tasks.map(t => t.id), c.task_ids);
+  assert.deepEqual(board.bounties, []);
+  await db.query('set role anon');
+  try {
+    const args = {p_flat_id:f.id, p_member_id:f.members[0], p_chore_id:c.chore_id};
+    assert.ok(f.members.includes(await rpc('get_chore_assignee', args)));
+    await assert.rejects(rpc('get_chore_assignee', {...args, p_chore_id:foreign.t.chore_id}), /not found/i);
+    await assert.rejects(rpc('get_chore_assignee', {...args, p_member_id:other.members[0]}), /member/i);
+    await assert.rejects(rpc('get_chore_assignee', {...args, p_member_id:null}), /member/i);
+  } finally { await db.query('reset role'); }
+});
